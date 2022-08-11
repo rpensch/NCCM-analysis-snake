@@ -1,0 +1,4 @@
+run_name: "cOSA_test"
+vcfs: "config/input.tsv"
+genome: "canFam4.0"
+phyloP: "/crex/proj/uppstore2017228/webexport/chao/ucsc_tracks/cf4.liftover.phylop.20210708.bw"

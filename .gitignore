@@ -1,0 +1,15 @@
+.snakemake
+config/input.tsv
+config/input_spim.tsv
+composite_matrix
+cOSA_test.annotation_summary.tsv
+logs
+resources
+snpEff
+input_beds                        
+phyloP
+results
+store
+input_beds
+1.1.NCCM_analysis.sh
+1.2.NCCM_scan.sh
