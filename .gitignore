@@ -1,6 +1,7 @@
 .snakemake
 config/input.tsv
 config/input_spim.tsv
+config/config.yaml
 composite_matrix
 cOSA_test.annotation_summary.tsv
 logs
