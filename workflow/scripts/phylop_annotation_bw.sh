@@ -17,11 +17,11 @@ INPUT="$1"
 OUTPUT="$2"
 BIGWIG_RS="$3"
 
-
+touch $OUTPUT
 # Annotate SPM files
 while read chr start end mutation_id ; do
 
-    scripts/bigWigToBedGraph $BIGWIG_RS -chrom=$chr -start=$start -end=$end phylop.temp
+    workflow/scripts/bigWigToBedGraph $BIGWIG_RS -chrom=$chr -start=$start -end=$end phylop.temp
 
     # Chose the highest phylop score (for indels that have multiple)
     PHYLOP=$(cut -f4 phylop.temp | sort -nr | head -1 )

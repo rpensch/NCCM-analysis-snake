@@ -108,13 +108,15 @@ if summary.shape[0] != \
     summary[(summary['spm_vcf'] == summary['spm_ann']) & 
             (summary['spm_vcf'] == summary['spm_phylop'])].shape[0]:
 
-    raise Exception("The number of somatic point mutations (SPMs) "\
+    summary.to_csv(args.out, sep='\t', index=False)
+    raise Exception(f"The number of somatic point mutations (SPMs) "\
                     "does not match in all files per sample.")
 
 elif summary.shape[0] != \
     summary[(summary['sim_vcf'] == summary['sim_ann']) & 
             (summary['sim_vcf'] == summary['sim_phylop'])].shape[0]:
 
+    summary.to_csv(args.out, sep='\t', index=False)
     raise Exception("The number of somatic indel mutations (SIMs) "\
                     "does not match in all files per sample.")
 
