@@ -13,9 +13,9 @@ use-envmodules: True
 
 # Example resource configuration
 default-resources:
-   - runtime_min=60
    - mem_mb=6000
    - disk_mb=1000000
+   - runtime="01:00:00"
 # # set-threads: map rule names to threads
 # set-threads:
 #   - single_core_rule=1
