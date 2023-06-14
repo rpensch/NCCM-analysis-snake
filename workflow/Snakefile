@@ -67,7 +67,7 @@ rule snpEff:
         "snpEff/4.3t"
     shell:
         """
-        snpEff ann -noStats -canon {params} {input.vcf} |
+        snpEff ann -noStats {params} {input.vcf} |
         gzip -c > {output}
         """
 
@@ -191,12 +191,13 @@ rule nccm_analysis:
         "{params.prefix}.top_nccm_genes.list"
     params:
         phyloP_threshold = config["phyloP_threshold"],
-        prefix = config["run_name"] + ".phylop-" + config["phyloP_threshold"]
-    threads: 1
+        prefix = "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"]
+    threads: 16
     shell:
         """
+        mkdir -p results/nccms ; \
         workflow/scripts/1.1.NCCM_analysis.sh {input.matrix} {input.gene_set} \
-        {params.prefix} {params.phyloP_threshold} 9 6 {threads}
+        {params.prefix} {params.phyloP_threshold} 10 7 {threads}
         """
 
 rule all:
@@ -207,6 +208,4 @@ rule all:
         "{params.prefix}.top_nccm_genes_spim.tsv",
         "{params.prefix}.top_nccm_genes.list"
     params:
-        phyloP_threshold = config["phyloP_threshold"],
-        prefix = config["run_name"] + ".phylop-{params.phyloP_threshold}"
-    
+        prefix = "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"]
