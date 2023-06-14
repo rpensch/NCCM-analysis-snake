@@ -18,7 +18,7 @@ OUTPUT="$2"
 BIGWIG_RS="$3"
 
 touch $OUTPUT
-# Annotate SPM files
+# Annotate SPIM files
 while read chr start end mutation_id ; do
 
     workflow/scripts/bigWigToBedGraph $BIGWIG_RS -chrom=$chr -start=$start -end=$end phylop.temp
