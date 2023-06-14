@@ -1,4 +1,7 @@
 run_name: "cOSA_test"
 vcfs: "config/input.tsv"
+spim: "separated"
 genome: "canFam4.0"
 phyloP: "/crex/proj/uppstore2017228/webexport/chao/ucsc_tracks/cf4.liftover.phylop.20210708.bw"
+phyloP_threshold: "1.45"
+gene_set: "resources/canfam4_gene_100kb_flanks_4_NCCM.in"
