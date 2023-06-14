@@ -16,8 +16,7 @@ sample  spm     sim
 
 ## Software
 
-- Snakemake
-- BEDTools (version 2.29.2)
+- Snakemake (version 7.8.5)
 - BEDOPS (version 2.4.39)
 - snpEff (version 4.3t)
 - vcftools (version 0.1.12)
@@ -33,4 +32,4 @@ bigwigtobedgraph from UCSC
 
 
 
-snakemake --profile profiles/slurm.uppmax composite_matrix --jobs 1 --use-envmodules
+snakemake --profile profiles/slurm.uppmax composite_matrix 
