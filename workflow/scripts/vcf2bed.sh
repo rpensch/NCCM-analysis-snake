@@ -28,8 +28,15 @@ while read chrom pos id ref alt qual filter info format tumor normal mutation_id
 
 done
 
+n_spm=$(awk 'END{print NR}' $spm_out)
+n_sim=$(awk 'END{print NR}' $spm_out)
+
 if [ $n_spm -eq 0 ] ; then 
     echo "0 somatic point mutations (SPMs) in file."
+    exit 1
 elif [ $n_sim -eq 0 ] ; then 
     echo "0 somatic indel mutations (SIMs) in file."
+    exit 1
+else
+    exit 0
 fi
