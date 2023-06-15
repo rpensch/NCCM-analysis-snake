@@ -103,7 +103,7 @@ elif config["phyloP_format"] == "bed":
         chromosomes = f.read().splitlines()
 
     rule split_chroms:
-        input:  "results/input_beds/{sample}.{spim}.{group}.sorted.bed"
+        input:  "results/input_beds/{sample}.{spim}.sorted.bed"
         output: temp("results/input_beds/{sample}.{spim}.sorted.{chrom}.bed")
         shell: 
             """
