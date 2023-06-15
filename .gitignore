@@ -2,6 +2,7 @@
 config/input.tsv
 config/input_spim.tsv
 config/config.yaml
+config/canfam4.chromosomes.txt
 composite_matrix
 cOSA_test.annotation_summary.tsv
 logs

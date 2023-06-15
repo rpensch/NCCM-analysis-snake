@@ -21,8 +21,10 @@ sample  spm     sim
 - snpEff (version 4.3t)
 - vcftools (version 0.1.12)
 - python3 (version 3.9.5)
+- BEDTools (version 2.29.2)
 
-module load bioinfo-tools snakemake/7.8.5 BEDOPS/2.4.39 snpEff/4.3t vcftools/0.1.12 python3/3.9.5
+module load bioinfo-tools snakemake/7.8.5 BEDOPS/2.4.39 snpEff/4.3t vcftools/0.1.12 python3/3.9.5 BEDTools/2.29.2 
+
 
 ## Other stuff
 
