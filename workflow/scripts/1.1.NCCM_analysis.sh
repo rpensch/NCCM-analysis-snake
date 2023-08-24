@@ -68,7 +68,7 @@ while read gene chr dflank start stop uflank tlength norm_length
 do
 	zcat $MASTER | awk -v chr="$chr" -v dflank="$dflank" -v uflank="$uflank" -v type="$TYPE_COL" \
 	'$1==chr && $2>=dflank && $2<=uflank && $type=="noncoding"' | 
-	awk -v cons="$CONS" -v cons_col="$CONS_COL" '$cons_col!="NaN" && $cons_col>=cons' | cat -n | sed "s/^[ ]*/$gene.NCCM_/g" \
+	awk -v cons="$CONS" -v cons_col="$CONS_COL" '$cons_col!="NaN" && $cons_col>=cons' | sort -n -k2,2 | cat -n | sed "s/^[ ]*/$gene.NCCM_/g" \
 	>> $PREF.top_nccm_genes_spim.tsv
 	
 done < $PREF.top_nccm_gene_100kb_flanks.in
