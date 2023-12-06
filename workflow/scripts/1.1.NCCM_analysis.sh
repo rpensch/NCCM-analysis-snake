@@ -50,7 +50,7 @@ cat $PREF-*.scan.tsv >> $PREF.scan.tsv
 # get the top nccm_gene + their NCCM rates
 #-------------------------------------------
 
-awk -F'\t' 'NR==1{print;next}$5>=2{print | "sort -k5nr"}' $PREF.scan.tsv \
+awk -F'\t' 'NR==1{print;next}$5>0{print | "sort -k5nr"}' $PREF.scan.tsv \
 > $PREF.top_nccm_genes.list
 
 echo "NCCM top list ready."
