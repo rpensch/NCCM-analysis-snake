@@ -52,7 +52,7 @@ if (ann.shape[0] == 0) & (phylop.shape[0] == 0) & (composite.shape[0] == 0):
     exit()
 
 # Expand the annotations to columns
-composite[annotations] = composite.apply(lambda x: extract_annotations(x['info']), axis = 1, result_type = 'expand')
+composite[annotations] = composite.apply(lambda x: extract_annotations(x['info'], annotations), axis = 1, result_type = 'expand')
 
 # Get the coding type
 composite['coding_type'] = composite['annotation'].apply(lambda x: get_coding_type(x))

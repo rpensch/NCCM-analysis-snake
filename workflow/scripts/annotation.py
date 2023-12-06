@@ -14,7 +14,7 @@ def load_bed(bed):
      
     return bed
 
-def extract_annotations(info):
+def extract_annotations(info, ann):
      
     ''' Extract the annotations from the VCF info field. '''
      
@@ -44,17 +44,16 @@ coding = ['conservative_inframe_deletion', 'conservative_inframe_insertion', 'di
           'frameshift_variant&stop_lost', 'initiator_codon_variant', 'missense_variant', 
           'missense_variant&splice_region_variant', 'splice_region_variant&synonymous_variant', 'start_lost', 
           'stop_gained', 'stop_gained&conservative_inframe_insertion', 'stop_gained&disruptive_inframe_deletion', 
-          'stop_gained&splice_region_variant', 'stop_lost', 'stop_retained_variant','synonymous_variant']
+          'stop_gained&splice_region_variant', 'stop_lost', 'stop_retained_variant','synonymous_variant',
+          'splice_acceptor_variant', 'splice_acceptor_variant&intron_variant', 
+          'splice_acceptor_variant&splice_donor_variant&intron_variant',
+          'splice_donor_variant','splice_donor_variant&intron_variant', 'splice_region_variant']
 
 noncoding = ['3_prime_UTR_variant', '5_prime_UTR_premature_start_codon_gain_variant', '5_prime_UTR_variant',
              'downstream_gene_variant', 'intergenic_region', 'intragenic_variant', 'intron_variant',  
-             'non_coding_transcript_exon_variant', 'non_coding_transcript_variant', 'splice_acceptor_variant',
-             'splice_acceptor_variant&intron_variant', 'splice_acceptor_variant&splice_donor_variant&intron_variant',
-             'splice_donor_variant','splice_donor_variant&intron_variant', 'splice_region_variant&intron_variant', 
+             'non_coding_transcript_exon_variant', 'non_coding_transcript_variant', 'splice_region_variant&intron_variant', 
              'splice_region_variant&non_coding_transcript_exon_variant',
              'upstream_gene_variant']
-
-ambiguous = ['splice_region_variant']
 
 def get_coding_type(annotation):
      
@@ -64,8 +63,6 @@ def get_coding_type(annotation):
         return 'coding'
     elif annotation in noncoding:
         return 'noncoding'
-    elif annotation in ambiguous:
-        return 'splice_region_variant'
     else:
         import warnings
         warnings.warn(f"WARNING: Unknown variant type: {annotation}.")
