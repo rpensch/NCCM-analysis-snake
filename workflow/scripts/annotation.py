@@ -36,36 +36,21 @@ def extract_annotations(info, ann):
     return ann_list
 
 # Define coding and non-coding variants
-coding = ['conservative_inframe_deletion', 'conservative_inframe_insertion', 'disruptive_inframe_deletion',
-          'disruptive_inframe_deletion&splice_region_variant', 'disruptive_inframe_insertion', 'frameshift_variant',
-          'frameshift_variant&splice_acceptor_variant&splice_region_variant&intron_variant',
-          'frameshift_variant&splice_donor_variant&splice_region_variant&intron_variant',
-          'frameshift_variant&splice_region_variant', 'frameshift_variant&stop_gained',
-          'frameshift_variant&stop_lost', 'initiator_codon_variant', 'missense_variant', 
-          'missense_variant&splice_region_variant', 'splice_region_variant&synonymous_variant', 'start_lost', 
-          'stop_gained', 'stop_gained&conservative_inframe_insertion', 'stop_gained&disruptive_inframe_deletion', 
-          'stop_gained&splice_region_variant', 'stop_lost', 'stop_retained_variant','synonymous_variant',
-          'splice_acceptor_variant', 'splice_acceptor_variant&intron_variant', 
-          'splice_acceptor_variant&splice_donor_variant&intron_variant',
-          'splice_donor_variant','splice_donor_variant&intron_variant', 'splice_region_variant']
+coding = ['HIGH', 'MODERATE', 'LOW']
 
-noncoding = ['3_prime_UTR_variant', '5_prime_UTR_premature_start_codon_gain_variant', '5_prime_UTR_variant',
-             'downstream_gene_variant', 'intergenic_region', 'intragenic_variant', 'intron_variant',  
-             'non_coding_transcript_exon_variant', 'non_coding_transcript_variant', 'splice_region_variant&intron_variant', 
-             'splice_region_variant&non_coding_transcript_exon_variant',
-             'upstream_gene_variant']
+noncoding = ['MODIFIER']
 
-def get_coding_type(annotation):
+def get_coding_type(annotation_impact):
      
     ''' Is the variant coding or non-coding? '''
 
-    if annotation in coding:
+    if annotation_impact in coding:
         return 'coding'
-    elif annotation in noncoding:
+    elif annotation_impact in noncoding:
         return 'noncoding'
     else:
         import warnings
-        warnings.warn(f"WARNING: Unknown variant type: {annotation}.")
+        warnings.warn(f"WARNING: Unknown variant type: {annotation_impact}.")
         return 'NaN'
 
 def extract_vaf(format, t_info):

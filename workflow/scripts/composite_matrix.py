@@ -55,7 +55,7 @@ if (ann.shape[0] == 0) & (phylop.shape[0] == 0) & (composite.shape[0] == 0):
 composite[annotations] = composite.apply(lambda x: extract_annotations(x['info'], annotations), axis = 1, result_type = 'expand')
 
 # Get the coding type
-composite['coding_type'] = composite['annotation'].apply(lambda x: get_coding_type(x))
+composite['coding_type'] = composite['annotation_impact'].apply(lambda x: get_coding_type(x))
 
 # If possible, get the VAF
 tumour_sample = get_tumour_sample(args.ann)
