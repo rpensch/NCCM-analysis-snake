@@ -73,6 +73,9 @@ do
 	
 done < $PREF.top_nccm_gene_100kb_flanks.in
 
+# Clean up 
+rm ${SETS##*/}-*
+
 echo "All done :)"
 
 exit 0
