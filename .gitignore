@@ -6,7 +6,6 @@ config/canfam4.chromosomes.txt
 composite_matrix
 cOSA_test.annotation_summary.tsv
 logs
-resources
 snpEff
 input_beds                        
 phyloP
