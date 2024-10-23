@@ -226,9 +226,9 @@ rule nccm_analysis:
         matrix = "results/composite_matrix/" + config["run_name"] + ".composite_matrix.tsv.gz",
         gene_set = config["gene_set"]
     output:
-        "{params.prefix}.scan.tsv",
-        "{params.prefix}.top_nccm_genes_spim.tsv",
-        "{params.prefix}.top_nccm_genes.list"
+        "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"] + ".scan.tsv",
+        "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"] + ".top_nccm_genes_spim.tsv",
+        "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"] + ".top_nccm_genes.list"
     params:
         phyloP_threshold = config["phyloP_threshold"],
         prefix = "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"]
@@ -244,8 +244,8 @@ rule all:
     input:
         "results/annotation/" + config['run_name'] + ".annotation_summary.tsv",
         "results/composite_matrix/" + config["run_name"] + ".composite_matrix.tsv.gz",
-        "{params.prefix}.scan.tsv",
-        "{params.prefix}.top_nccm_genes_spim.tsv",
-        "{params.prefix}.top_nccm_genes.list"
+        "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"] + ".scan.tsv",
+        "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"] + ".top_nccm_genes_spim.tsv",
+        "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"] + ".top_nccm_genes.list"
     params:
         prefix = "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"]
