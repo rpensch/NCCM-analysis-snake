@@ -7,6 +7,7 @@ vcfs = pd.read_table(config["vcfs"]).set_index("sample", drop=False)
 samples = list(vcfs["sample"])
 spims = ['spm','sim']
 
+# Check the vcf files, separate spims if needed
 if config['spim'].lower() == 'combined':
 
     rule extract_spms:
@@ -55,6 +56,7 @@ elif config['spim'].lower() == 'separated':
         shell:
             "mkdir -p resources/input ; ln -s {input} {output}"
 
+# Annotate the vcf files wih snpEff
 rule snpEff:
     input:
         vcf = "resources/input/{sample}.{spim}.vcf.gz"
@@ -71,6 +73,7 @@ rule snpEff:
         gzip -c > {output}
         """
 
+# Convert the vcf files to bed format
 rule vcf2bed:
     input:
         expand("resources/input/{{sample}}.{spim}.vcf.gz", spim = spims)
@@ -82,6 +85,7 @@ rule vcf2bed:
     shell:
         "workflow/scripts/vcf2bed.sh {wildcards.sample} {input} {output}"
 
+# Annotate the bed files with phyloP scores
 if config["phyloP_format"] == "bw":
 
     rule phyloP:
@@ -135,6 +139,7 @@ elif config["phyloP_format"] == "bed":
             workflow/scripts/join_phylop_scores.py --phylop '{input.phylop}' --bed {input.bed} --out {output}
             """
 
+# Summarize the annotation results
 if config['spim'].lower() == 'separated':
 
     rule annotation_summary:
@@ -185,6 +190,7 @@ rule annotate:
     input:
         "results/annotation/" + config['run_name'] + ".annotation_summary.tsv"
 
+# Combine all annotation and phyloP scores in a matrix
 rule combine_data: 
     input:
         snpEff = "results/annotation/snpEff/{sample}.{spim}.ann.vcf.gz",
@@ -221,6 +227,7 @@ rule composite_matrix:
         annotation = "results/annotation/" + config['run_name'] + ".annotation_summary.tsv",
         composite_matrix = "results/composite_matrix/" + config["run_name"] + ".composite_matrix.tsv.gz"
 
+# Run the NCCM analysis
 rule nccm_analysis:
     input:
         matrix = "results/composite_matrix/" + config["run_name"] + ".composite_matrix.tsv.gz",
