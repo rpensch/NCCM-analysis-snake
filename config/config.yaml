@@ -7,3 +7,4 @@ phyloP_format: "bed"
 phyloP_threshold: "1.45"
 chrom_list: "config/canfam4.chromosomes.txt"
 gene_set: "resources/canfam4_gene_100kb_flanks_4_NCCM.in"
+threads: 16

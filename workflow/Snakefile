@@ -239,7 +239,7 @@ rule nccm_analysis:
     params:
         phyloP_threshold = config["phyloP_threshold"],
         prefix = "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"]
-    threads: 16
+    threads: config["threads"]
     shell:
         """
         mkdir -p results/nccms ; \
