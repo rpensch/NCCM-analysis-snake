@@ -1,5 +1,0 @@
-{
-    "SBATCH_DEFAULTS": "account=snic2021-5-580 no-requeue partition=core output=logs/{rule}/slurm.{rule}-{wildcards}-%j.out error=logs/{rule}/slurm.{rule}-{wildcards}-%j.out",
-    "CLUSTER_NAME": "",
-    "CLUSTER_CONFIG": ""
-}

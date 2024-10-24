@@ -16,9 +16,6 @@ if config['spim'].lower() == 'combined':
         output:
             temp("resources/input/{sample}.spm.vcf.gz"),
         shadow: "full"
-        envmodules:
-            "bioinfo-tools",
-            "vcftools/0.1.12"
         group: "separate_spims"
         shell:
             """
@@ -33,9 +30,6 @@ if config['spim'].lower() == 'combined':
         output:
             temp("resources/input/{sample}.sim.vcf.gz")
         shadow: "full"
-        envmodules:
-            "bioinfo-tools",
-            "vcftools/0.1.12"
         group: "separate_spims"
         shell:
             """
@@ -64,9 +58,6 @@ rule snpEff:
         "results/annotation/snpEff/{sample}.{spim}.ann.vcf.gz"
     params:
         config["genome"]
-    envmodules:
-        "bioinfo-tools",
-        "snpEff/4.3t"
     shell:
         """
         snpEff ann -noStats {params} {input.vcf} |
@@ -79,9 +70,6 @@ rule vcf2bed:
         expand("resources/input/{{sample}}.{spim}.vcf.gz", spim = spims)
     output:
         expand("results/input_beds/{{sample}}.{spim}.sorted.bed", spim = spims)
-    envmodules:
-        "bioinfo-tools",
-        "BEDOPS/2.4.39"
     shell:
         "workflow/scripts/vcf2bed.sh {wildcards.sample} {input} {output}"
 
@@ -152,8 +140,6 @@ if config['spim'].lower() == 'separated':
             sim_phyloP = expand(["results/annotation/phyloP/{sample}.sim.phyloP.bed"], sample = samples)
         output:
             "results/annotation/" + config["run_name"] + ".annotation_summary.tsv"
-        envmodules:
-            "python3/3.9.5"
         shell:
             """
             workflow/scripts/annotation_summary.py --samples '{samples}' \
@@ -175,8 +161,6 @@ elif config['spim'].lower() == 'combined':
             sim_phyloP = expand("results/annotation/phyloP/{sample}.sim.phyloP.bed", sample = samples)
         output:
             "results/annotation/" + config["run_name"] + ".annotation_summary.tsv"
-        envmodules:
-            "python3/3.9.5"
         shell:
             """
             workflow/scripts/annotation_summary.py --samples '{samples}'' \
@@ -197,8 +181,6 @@ rule combine_data:
         phyloP = "results/annotation/phyloP/{sample}.{spim}.phyloP.bed"
     output:
         temp("results/composite_matrix/{sample}.{spim}.composite_matrix.tsv.gz")
-    envmodules:
-            "python3/3.9.5"
     shell:
         """
         workflow/scripts/composite_matrix.py --sample {wildcards.sample} \
