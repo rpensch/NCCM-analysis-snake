@@ -28,4 +28,4 @@ joined = bed.merge(phylop, on = ['chrom','start','stop','id'], how = 'left')
 
 # Save output
 if joined.shape[0] == bed.shape[0]:
-    joined[['chrom', 'start', 'stop','phyloP', 'id']].to_csv(args.out, sep = '\t', index = False, header = False)
+    joined[['chrom', 'start', 'stop','phyloP', 'id']].to_csv(args.out, sep = '\t', index = False, header = False, na_rep = 'NaN')
