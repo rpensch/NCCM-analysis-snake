@@ -111,7 +111,7 @@ elif config["phyloP_format"] == "bed":
             """
             mkdir -p results/annotation/ ; mkdir -p results/annotation/phyloP
             bedtools intersect -a {input.bed} -b {input.phyloP} -loj -sorted |
-                awk -F '\t' '{{OFS=FS}}{{if ($7 ==".") {{$8="NaN"}}}}1' |
+                awk -F '\t' '{{OFS=FS}}{{if ($8 ==".") {{$9="NaN"}}}}1' |
                 cut -f 1-4,9 > {output}
             """
     
