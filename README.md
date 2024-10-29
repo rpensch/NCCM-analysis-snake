@@ -2,7 +2,7 @@
 
 ## Input 
 
-Filtered somatic variants in gzip compressed vcf file. For each sample, either provide one vcf that includes both somatic point mutations (SPIMs) and somatic indel mutations (SIMs), or two vcfs that are somatic point (SPM) and indel mutation (SIM) separated (one SPM file and one SIM file as e.g. from Mutect2 output). List the input files in an tsv file with with header that is either `sample spim` or `sample spm sim` - see `config/example.input.tsv`
+Filtered somatic variants in gzip compressed vcf file. For each sample, either provide one vcf that includes both somatic point mutations (SPIMs) and somatic indel mutations (SIMs), or two vcfs that are somatic point (SPM) and indel mutation (SIM) separated (one SPM file and one SIM file as e.g. from Mutect2 output). List the input files in an tsv file with with header that is either `sample spim` or `sample spm sim` - see `config/example.input.tsv`. Provide absolute file paths.
 
 ## Required resources
 
@@ -12,11 +12,13 @@ Filtered somatic variants in gzip compressed vcf file. For each sample, either p
 
 - A set of genes to test for NCCM enrichment, with the following columns (no header): `gene_name chromosome lower_flank gene_start gene_end upper flank cds_size_bp correction_factor`. The lower and upper flank are 100 Kbp from the gene start and end. The correction factor is `100,000 / (upper - lowe flank - cds_size)`. See `resources/canfam4_gene_100kb_flanks_4_NCCM.in`
 
+Make sure the chromosome notation is consistent across all input and resource data (either chr1 or 1)! Including vcf files, the phyloP scores bed file content + the naming of the phylP score bed files, the chromosome list file and the gene flanks dile. 
+
 ## Config
 
 In the config file `config/config.yaml`, change `vcfs: "config/example.input.tsv"` to the name of your input tsv file. Also, set `spim:` to either  `"separated"` or `"combined"`, depending on whether you provided one or two vcf files.
 
-- `genome`: Genome input for [snpEff](https://pcingola.github.io/SnpEff/snpeff/introduction/)
+- `genome`: Genome input for [snpEff](https://pcingola.github.io/SnpEff/snpeff/introduction/) - e.g. GRCh37.75
 
 - `phyloP`: Path for the directory of phyloP score files
 
@@ -38,6 +40,16 @@ Tested with the followinng software versions.
 - BEDTools (version 2.29.2)
 
 On Uppmax `module load bioinfo-tools snakemake/7.8.5 BEDOPS/2.4.39 snpEff/4.3t vcftools/0.1.12 python3/3.9.5 BEDTools/2.29.2`
+
+## Run
+
+Test/dry run:
+
+`snakemake -np all`
+
+Run the whole workflow with e.g. 16 cores:
+
+`snakemake --cores 16 all`
 
 ## Output
 
