@@ -7,10 +7,10 @@ vcfs = pd.read_table(config["vcfs"]).set_index("sample", drop=False)
 samples = list(vcfs["sample"])
 spims = ['spm','sim']
 
-include: "preprocess_vcf.smk"
-include: "snpEff.smk"
-include: "phylop_annotate.smk"
-include: "summarize_annotation.smk"
-include: "create_matrix.smk"
+include: "rules/preprocess_vcf.smk"
+include: "rules/snpEff.smk"
+include: "rules/phylop_annotate.smk"
+include: "rules/summarize_annotation.smk"
+include: "rules/create_matrix.smk"
 include: "rules/nccm_analysis.smk"
 include: "rules/collect_results.smk"
