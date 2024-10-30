@@ -4,7 +4,7 @@ spim: "separated"
 genome: "canFam4.0"
 phyloP: "/proj/uppstore2017228/KLT.04.200M/200m_MD_PhyloP_scores/scores.PhyloP.dog_v4_mdong_241MAMMALS"
 phyloP_format: "bed"
-phyloP_threshold: "1.45"
+phyloP_threshold: "1.296"
 chrom_list: "resources/canfam4.chromosomes.txt"
 gene_set: "resources/canfam4_gene_100kb_flanks_4_NCCM.in"
 threads: 16
