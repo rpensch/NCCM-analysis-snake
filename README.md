@@ -1,3 +1,4 @@
+
 # NCCM-analysis pipeline
 
 ## Input 
@@ -10,9 +11,9 @@ Filtered somatic variants in gzip compressed vcf file. For each sample, either p
 
 - A list of chromosomes for your genome, e.g. `resources/canfam4.chromosomes.txt`
 
-- A set of genes to test for NCCM enrichment, with the following columns (no header): `gene_name chromosome lower_flank gene_start gene_end upper flank cds_size_bp correction_factor`. The lower and upper flank are 100 Kbp from the gene start and end. The correction factor is `100,000 / (upper - lowe flank - cds_size)`. See `resources/canfam4_gene_100kb_flanks_4_NCCM.in`
+- A set of genes to test for NCCM enrichment, with the following columns (no header): `gene_name chromosome lower_flank gene_start gene_end upper_flank cds_size_bp correction_factor`. The lower and upper flank are 100 Kbp from the gene start and end. The correction factor is `100,000 / (upper - lowe flank - cds_size)`. See `resources/canfam4_gene_100kb_flanks_4_NCCM_v2.in`
 
-Make sure the chromosome notation is consistent across all input and resource data (either chr1 or 1)! Including vcf files, the phyloP scores bed file content + the naming of the phylP score bed files, the chromosome list file and the gene flanks dile. 
+Make sure the chromosome notation is consistent across all input and resource data (either chr1 or 1)! Including vcf files, the phyloP scores bed file content + the naming of the phylP score bed files, the chromosome list file and the gene flanks file. 
 
 ## Config
 
@@ -24,9 +25,9 @@ In the config file `config/config.yaml`, change `vcfs: "config/example.input.tsv
 
 - `phyloP_threshold`: The threshold for what is considered constraint - we have used 1.2 for human and 1.3 for dogs (8% of the genome)
 
-- `chrom_list`: Path for file with list of chromosomes, see above in `Require resources`
+- `chrom_list`: Path for file with list of chromosomes, see above in *Required resources*
 
-- `gene_set`: Path of the gene_set file as described in `Required resources`
+- `gene_set`: Path of the gene_set file as described in *Required resources*
 
 ## Software
 
@@ -39,7 +40,7 @@ Tested with the followinng software versions.
 - python3 (version 3.9.5)
 - BEDTools (version 2.29.2)
 
-On Uppmax `module load bioinfo-tools snakemake/7.8.5 BEDOPS/2.4.39 snpEff/4.3t vcftools/0.1.12 python3/3.9.5 BEDTools/2.29.2`
+On Uppmax do `module load bioinfo-tools snakemake/7.8.5 BEDOPS/2.4.39 snpEff/4.3t vcftools/0.1.12 python3/3.9.5 BEDTools/2.29.2`
 
 ## Run
 
@@ -55,7 +56,7 @@ Run the whole workflow with e.g. 16 cores:
 
 Main output files:
 
-- `results/composite_matrix/*.composite_matrix.tsv.gz` - includes all annotation data (snpeff + phyloP) for all samples
+- `results/composite_matrix/*.composite_matrix.tsv.gz` - includes all annotation data (snpeff + phyloP) for all samples. Missing phylop cores are `NaN`. 
 
 - `results/nccms/*scan.tsv` - this is the main output. 
 
