@@ -1,11 +1,35 @@
 # Convert the vcf files to bed format
-rule vcf2bed:
-    input:
-        expand("resources/input/{{sample}}.{spim}.vcf.gz", spim = spims)
-    output:
-        expand("results/input_beds/{{sample}}.{spim}.sorted.bed", spim = spims)
+rule vcf2bedspm:
+    input: "resources/input/{sample}.spm.vcf.gz"
+    output: "results/input_beds/{sample}.spm.sorted.bed"
     shell:
-        "workflow/scripts/vcf2bed.sh {wildcards.sample} {input} {output}"
+        """
+        zcat {input} | awk -v OFS='\t' -v sample='{wildcards.sample}' '{{print $0,sample":"$1":"$2":"$4":"$5}}' |
+        convert2bed -i vcf --snvs | awk -v OFS='\t' '{{print $1,$2,$3,$(NF)}}' | sort -k1,1 -k2,2n \
+        >> {output}
+        """
+
+rule vcf2bedsim:
+    input: "resources/input/{sample}.sim.vcf.gz"
+    output: "results/input_beds/{sample}.sim.sorted.bed"
+    shell:
+        """
+        zcat {input} | awk -v OFS='\t' -v sample='{wildcards.sample}' '{{print $0,sample":"$1":"$2":"$4":"$5}}' |
+        convert2bed -i vcf --insertions | awk -v OFS='\t' '{{print $1,$2,$3,$(NF)}}' | sort -k1,1 -k2,2n \
+        >> {output}.tmp
+        zcat {input} | awk -v OFS='\t' -v sample='{wildcards.sample}' '{{print $0,sample":"$1":"$2":"$4":"$5}}' |
+        convert2bed -i vcf --deletions |  awk -v OFS='\t' '{{print $1,$2,$3,$(NF)}}' | sort -k1,1 -k2,2n \
+        >> {output}.tmp
+        # Handle MNPs manually
+        zgrep -v '^#' {input} |
+        awk -v OFS='\t' -v sample='{wildcards.sample}' '{{ if (length($4)==length($5)) {{ print $0,sample":"$1":"$2":"$4":"$5}} }}' |
+        while read chrom pos id ref alt qual filter info format tumor normal mutation_id ; do
+                len=`echo $ref | awk '{{print length($1)}}'`
+                printf "$chrom\t$(($pos-1))\t$(($pos-1+$len))\t$mutation_id\n" >> {output}.tmp
+        done
+        sort -k1,1 -k2,2n {output}.tmp > {output}
+        rm {output}.tmp
+        """
 
 # Annotate the bed files with phyloP scores
 if config["phyloP_format"] == "bw":
