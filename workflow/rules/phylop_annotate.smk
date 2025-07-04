@@ -4,9 +4,13 @@ rule vcf2bedspm:
     output: "results/input_beds/{sample}.spm.sorted.bed"
     shell:
         """
-        zcat {input} | awk -v FS='\t' -v OFS='\t' -v sample='{wildcards.sample}' 'BEGIN {{ }} /^#/ {{print; next}}{{print $1,$2,$3,$4,$5,$6,$7,sample":"$1":"$2":"$4":"$5}}' | 
-        convert2bed -i vcf --snvs | awk -v OFS='\t' '{{print $1,$2,$3,$(NF)}}' | sort -k1,1 -k2,2n \
-        >> {output}
+        if [[ $(zcat {input} | grep -v "^#" | wc -l) -eq 0 ]]; then
+            touch {output}
+        else
+            zcat {input} | awk -v FS='\t' -v OFS='\t' -v sample='{wildcards.sample}' 'BEGIN {{ }} /^#/ {{print; next}}{{print $1,$
+            convert2bed -i vcf --snvs | awk -v OFS='\t' '{{print $1,$2,$3,$(NF)}}' | sort -k1,1 -k2,2n \
+            >> {output}
+        fi
         """
 
 rule vcf2bedsim:
@@ -14,21 +18,25 @@ rule vcf2bedsim:
     output: "results/input_beds/{sample}.sim.sorted.bed"
     shell:
         """
-        zcat {input} | awk -v FS='\t' -v OFS='\t' -v sample='{wildcards.sample}' 'BEGIN {{ }} /^#/ {{print; next}}{{print $1,$2,$3,$4,$5,$6,$7,sample":"$1":"$2":"$4":"$5}}' | 
-        convert2bed -i vcf --insertions | awk -v OFS='\t' '{{print $1,$2,$3,$(NF)}}' | sort -k1,1 -k2,2n \
-        >> {output}.tmp
-        zcat {input} | awk -v FS='\t' -v OFS='\t' -v sample='{wildcards.sample}' 'BEGIN {{ }} /^#/ {{print; next}}{{print $1,$2,$3,$4,$5,$6,$7,sample":"$1":"$2":"$4":"$5}}' | 
-        convert2bed -i vcf --deletions |  awk -v OFS='\t' '{{print $1,$2,$3,$(NF)}}' | sort -k1,1 -k2,2n \
-        >> {output}.tmp
-        # Handle MNPs manually
-        zgrep -v '^#' {input} | 
-        awk -v FS='\t' -v OFS='\t' -v sample='{wildcards.sample}' '{{ if (length($4)==length($5)) {{print $1,$2,$3,$4,$5,$6,$7,sample":"$1":"$2":"$4":"$5}} }}' | 
-        while read chrom pos id ref alt qual filter info format tumor normal mutation_id ; do 
-            len=`echo $ref | awk '{{print length($1)}}'` 
-            printf "$chrom\t$(($pos-1))\t$(($pos-1+$len))\t$mutation_id\n" >> {output}.tmp
+        if [[ $(zcat {input} | grep -v "^#" | wc -l) -eq 0 ]]; then
+            touch {output}
+        else
+            zcat {input} | awk -v FS='\t' -v OFS='\t' -v sample='{wildcards.sample}' 'BEGIN {{ }} /^#/ {{print; next}}{{print $1,$2,$3,$4,$5,$6,$7,sample":"$1":"$2":"$4":"$5}}' |
+            convert2bed -i vcf --insertions | awk -v OFS='\t' '{{print $1,$2,$3,$(NF)}}' | sort -k1,1 -k2,2n \
+            >> {output}.tmp
+            zcat {input} | awk -v FS='\t' -v OFS='\t' -v sample='{wildcards.sample}' 'BEGIN {{ }} /^#/ {{print; next}}{{print $1,$2,$3,$4,$5,$6,$7,sample":"$1":"$2":"$4":"$5}}' |
+            convert2bed -i vcf --deletions |  awk -v OFS='\t' '{{print $1,$2,$3,$(NF)}}' | sort -k1,1 -k2,2n \
+            >> {output}.tmp
+            # Handle MNPs manually
+            zgrep -v '^#' {input} |
+            awk -v FS='\t' -v OFS='\t' -v sample='{wildcards.sample}' '{{ if (length($4)==length($5)) {{print $1,$2,$3,$4,$5,$6,$7,sample":"$1":"$2":"$4":"$5}} }}' |
+            while read chrom pos id ref alt qual filter info format tumor normal mutation_id ; do
+                len=`echo $ref | awk '{{print length($1)}}'`
+                printf "$chrom\t$(($pos-1))\t$(($pos-1+$len))\t$mutation_id\n" >> {output}.tmp
             done
-        sort -k1,1 -k2,2n {output}.tmp > {output}
-        rm {output}.tmp
+            sort -k1,1 -k2,2n {output}.tmp > {output}
+            rm {output}.tmp
+        fi
         """
 
 # Annotate the bed files with phyloP scores
