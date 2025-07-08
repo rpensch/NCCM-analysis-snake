@@ -7,7 +7,7 @@ rule vcf2bedspm:
         if [[ $(zcat {input} | grep -v "^#" | wc -l) -eq 0 ]]; then
             touch {output}
         else
-            zcat {input} | awk -v FS='\t' -v OFS='\t' -v sample='{wildcards.sample}' 'BEGIN {{ }} /^#/ {{print; next}}{{print $1,$
+            zcat {input} | awk -v FS='\t' -v OFS='\t' -v sample='{wildcards.sample}' 'BEGIN {{ }} /^#/ {{print; next}}{{print $1,$2,$3,$4,$5,$6,$7,sample":"$1":"$2":"$4":"$5}}' |
             convert2bed -i vcf --snvs | awk -v OFS='\t' '{{print $1,$2,$3,$(NF)}}' | sort -k1,1 -k2,2n \
             >> {output}
         fi
