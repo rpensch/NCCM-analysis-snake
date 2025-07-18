@@ -1,81 +1,53 @@
 #!/bin/bash
-
-# name: 1.1.NCCM_analysis.sh
-# Script has two parts:
-# PART 1 - Submit NCCM_scan.sh
-# In this section, counts of non-coding alterations in the flanking regions of genes (n'hood)
-# are tallied and then normalized for length
-#-----------------------------------------------------------------------------------------
-# PART 2
-# Genes which have NCCMs that are extreme (i.e, >=2/kbp) are extracted, 
-# followed by the retrieval of their NCCM coordinates
-# written by: ShardaS
-# adapted: RP
-#-----------------------------------------------------------------------------------------
-# REQUIRED INPUT FILES - $MASTER
-# Composite S[P/I]M matrix file with the following columns:
-# Sample , Chrom , Pos,  Constraint score (GERP/PhyloP), CODING/NONCODING
-# Give column location of constraint and coding/non-coding as input
-# Run: 1.1.NCCM_analysis master_matrix gene_set_with_flanks out_prefix \
-# constraint_threshold constr_column type_column (n_parallel_processes)
-####################################################################################################################
-
-# Where is the data?
 MASTER="$1"
-FULL_GENE_SET="$2"
-PREF="$3"
-# Constraint score threshold
-CONS=$4
-# In column of master:
-CONS_COL=$5
-# COding/ non-coding type in column:
-TYPE_COL=$6
-# Number of parallel processes
-PROCESSES=$7
+GENE_SET="$2"
+CONS="$3"
+OUTPUT_FILE="$4"
 
-# First split the gene data into as many parts as there are processes
-SETS=${FULL_GENE_SET%.in}
-split --additional-suffix=.in --numeric-suffixes=1 -n l/$PROCESSES $FULL_GENE_SET ${SETS##*/}-
+printf "gene\tnc_count\tncncm_count\tnccm_count\tunique_nc_samples\tunique_ncncm_samples\tunique_nccm_samples\n" > $OUTPUT_FILE
 
-# Submit the scan as parallel processes
-for i in ${SETS##*/}-* ; do 
-    workflow/scripts/1.2.NCCM_scan.sh $MASTER $i $PREF-${i##*-} $CONS $CONS_COL $TYPE_COL &
-done
-wait
+bedtools intersect -a $GENE_SET -b $MASTER -wa -wb | \
+    awk -F'\t' -v cons_threshold="$CONS" '
+    BEGIN { OFS="\t" }
+    {
+        # Fields from the variant BED file
+        sample_id = $9
+        cons_score = $8
 
-# Put together the scans 
-printf "GENE\tnonCoding\tconsnonCoding\tconsSamples\tnccmRate\tsamplesRate\n" > $PREF.scan.tsv
-cat $PREF-*.scan.tsv >> $PREF.scan.tsv
+        # Fields from the gene BED file
+        gene = $4
+        
+        # Increment total non-coding count for the gene
+        noncoding_count[gene]++
+		nc_samples[gene][sample_id] = 1
+        
+        # Check conservation
+        if (cons_score != "NaN" && cons_score >= cons_threshold) {
+            noncoding_constraint_count[gene]++
+            nccm_samples[gene][sample_id] = 1
+        }
+		else if (cons_score != "NaN" && cons_score < cons_threshold) {
+			noncoding_nonconstraint_count[gene]++
+            ncncm_samples[gene][sample_id] = 1
+		}
+    }
+    END {
+        # awk will only know about genes that had at least one variant.
+        # To print all genes (even with 0 counts), we need to read the gene set again.
+        while ((getline line < "'$GENE_SET'") > 0) {
+            split(line, parts, " ")
+            gene = parts[4]
 
-# get the top nccm_gene + their NCCM rates
-#-------------------------------------------
+            # Get counts, defaulting to 0
+            nc_count = noncoding_count[gene] ? noncoding_count[gene] : 0
+            nccm_count = noncoding_constraint_count[gene] ? noncoding_constraint_count[gene] : 0
+			ncncm_count = noncoding_nonconstraint_count[gene] ? noncoding_nonconstraint_count[gene] : 0
+            unique_nc_samples = length(nc_samples[gene])
+			unique_nccm_samples = length(nccm_samples[gene])
+			unique_ncncm_samples = length(ncncm_samples[gene])
 
-awk -F'\t' 'NR==1{print;next}$5>0{print | "sort -k5nr"}' $PREF.scan.tsv \
-> $PREF.top_nccm_genes.list
-
-echo "NCCM top list ready."
-
-# get the top nccm genes' flanking coordinates
-#----------------------------------------------
-while read gene nonCoding consnonCoding consSamples nccmRate samplesRate 
-do
-	awk -F'\t' -v OFS='\t' -v gene=$gene '$1==gene' $FULL_GENE_SET >> $PREF.top_nccm_gene_100kb_flanks.in
-done < $PREF.top_nccm_genes.list | tail -n +2
-
-# iterate through the top gene list and get their get the S[P/I]M coordinates
-#-----------------------------------------------------------------------------
-while read gene chr dflank start stop uflank tlength norm_length
-do
-	zcat $MASTER | awk -v chr="$chr" -v dflank="$dflank" -v uflank="$uflank" -v type="$TYPE_COL" \
-	'$1==chr && $2>=dflank && $2<=uflank && $type=="noncoding"' | 
-	awk -v cons="$CONS" -v cons_col="$CONS_COL" '$cons_col!="NaN" && $cons_col>=cons' | sort -n -k2,2 | cat -n | sed "s/^[ ]*/$gene.NCCM_/g" \
-	>> $PREF.top_nccm_genes_spim.tsv
-	
-done < $PREF.top_nccm_gene_100kb_flanks.in
-
-# Clean up 
-rm ${SETS##*/}-*
-
-echo "All done :)"
-
-exit 0
+            # Print final result
+			printf "%s\t%d\t%d\t%d\t%d\t%d\t%d\n", gene, nc_count, ncncm_count, nccm_count, unique_nc_samples, unique_ncncm_samples, unique_nccm_samples
+        }
+    }
+' >> "$OUTPUT_FILE"
