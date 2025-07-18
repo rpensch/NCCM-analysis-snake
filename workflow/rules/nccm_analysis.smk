@@ -1,4 +1,3 @@
-# Run the NCCM analysis
 def get_matrix_input(wildcards):
     """
     Returns the path to the matrix based on the 'start_from' config setting.
@@ -12,29 +11,36 @@ def get_matrix_input(wildcards):
     else:
         raise ValueError("ConfigError: 'start_from' must be 'vcf' or 'matrix'")
 
+rule noncoding_bed:
+    input:
+        matrix = get_matrix_input
+    output:
+        temp("results/nccms/" + config["run_name"] + ".ncm.bed")
+    shell:
+        """
+        zcat {input} | sed 1d | awk '$7=="noncoding"' | 
+        awk -v OFS='\t' -v FS='\t' '{{print $1,$8,$9,$10,$5}}' \
+        > {output}
+        """
+
 rule nccm_analysis:
     input:
-        matrix = get_matrix_input,
+        ncm = "results/nccms/" + config["run_name"] + ".ncm.bed",
         gene_set = config["gene_set"]
     output:
         "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"] + ".scan.tsv",
-        "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"] + ".top_nccm_genes_spim.tsv",
-        "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"] + ".top_nccm_genes.list"
     params:
         phyloP_threshold = config["phyloP_threshold"],
-        prefix = "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"]
     threads: config["threads"]
     shell:
         """
         mkdir -p results/nccms ; \
-        workflow/scripts/1.1.NCCM_analysis.sh {input.matrix} {input.gene_set} \
-        {params.prefix} {params.phyloP_threshold} 10 7 {threads}
+        workflow/scripts/nccm_analysis.sh {input.ncm} {input.gene_set} \
+        {params.phyloP_threshold} {output}
         """
 
 rule nccms:
     input:
         "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"] + ".scan.tsv",
-        "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"] + ".top_nccm_genes_spim.tsv",
-        "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"] + ".top_nccm_genes.list"
     params:
         prefix = "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"]

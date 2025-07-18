@@ -11,7 +11,7 @@ Filtered somatic variants in gzip compressed vcf file. For each sample, either p
 
 - A list of chromosomes for your genome, e.g. `resources/canfam4.chromosomes.txt`
 
-- A set of genes to test for NCCM enrichment, with the following columns (no header): `gene_name chromosome lower_flank gene_start gene_end upper_flank cds_size_bp correction_factor`. The lower and upper flank are 100 Kbp from the gene start and end. The correction factor is `100,000 / (upper - lowe flank - cds_size)`. See `resources/canfam4_gene_100kb_flanks_4_NCCM_v2.in`
+- A set of genes to test for NCCM enrichment in bed format, with the following columns (no header): `chromosome lower_flank upper_flank gene`. See `resources/canfam4_gene_100kb_flanks_4_NCCM_v2.bed`
 
 Make sure the chromosome notation is consistent across all input and resource data (either chr1 or 1)! Including vcf files, the phyloP scores bed file content + the naming of the phylP score bed files, the chromosome list file and the gene flanks file. 
 
@@ -59,6 +59,14 @@ Run the whole workflow with e.g. 16 cores:
 
 `snakemake --cores 16 all`
 
+Create the matrix, don't run the nccm analysis:
+
+`snakemake --cores 16 composite_matrix`
+
+Run only nccm analysis with a pre-existing matrix:
+
+`snakemake --cores 16 nccms`
+
 ## Output
 
 Main output files:
@@ -66,14 +74,3 @@ Main output files:
 - `results/composite_matrix/*.composite_matrix.tsv.gz` - includes all annotation data (snpeff + phyloP) for all samples. Missing phylop cores are `NaN`. 
 
 - `results/nccms/*scan.tsv` - this is the main output. 
-
-    - `nonCoding` for all non-coding mutations
-    - `consnonCoding` for non-coding constraint mutations (NCCMs)
-    - `consSampels` for the number of unique samples with NCCMs
-    - `nccmRate` is "the number of NCCMs per 100 Kbp per gene", basically `consnonCoding * the correction factor from the gene_set file` 
-    - `samplesRate` is `consSamples * the correction factor from the gene_set file` 
-
-- `results/nccms/*top_nccm_genes_spim.tsv` - a list of annotated mutations for each gene extracted from the composite matrix. This file can become quite big for large datasets. 
-
-
-To rank genes for downstream analyses, we use `nccmRate / the number of samples in the cohort`.  
