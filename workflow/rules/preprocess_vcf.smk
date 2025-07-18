@@ -69,7 +69,7 @@ rule compress:
     input:
         "resources/input/{sample}.{spim}.vcf"
     output:
-        "resources/input/{sample}.{spim}.vcf.gz"
+        temp("resources/input/{sample}.{spim}.vcf.gz")
     shell:
         """
         gzip {input}
