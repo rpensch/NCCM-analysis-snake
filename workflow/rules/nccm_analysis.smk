@@ -30,3 +30,11 @@ rule nccm_analysis:
         workflow/scripts/1.1.NCCM_analysis.sh {input.matrix} {input.gene_set} \
         {params.prefix} {params.phyloP_threshold} 10 7 {threads}
         """
+
+rule nccms:
+    input:
+        "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"] + ".scan.tsv",
+        "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"] + ".top_nccm_genes_spim.tsv",
+        "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"] + ".top_nccm_genes.list"
+    params:
+        prefix = "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"]
