@@ -19,7 +19,7 @@ rule noncoding_bed:
     shell:
         """
         zcat {input} | sed 1d | awk '$7=="noncoding"' | 
-        awk -v OFS='\t' -v FS='\t' '{print $1,$8,$9,$10,$5}' \
+        awk -v OFS='\t' -v FS='\t' '{{print $1,$8,$9,$10,$5}}' \
         > {output}
         """
 
@@ -29,23 +29,18 @@ rule nccm_analysis:
         gene_set = config["gene_set"]
     output:
         "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"] + ".scan.tsv",
-        "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"] + ".top_nccm_genes_spim.tsv",
-        "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"] + ".top_nccm_genes.list"
     params:
         phyloP_threshold = config["phyloP_threshold"],
-        prefix = "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"]
     threads: config["threads"]
     shell:
         """
         mkdir -p results/nccms ; \
-        workflow/scripts/1.1.NCCM_analysis.sh {input.ncm} {input.gene_set} \
-        {params.prefix} {params.phyloP_threshold} 10 7 {threads}
+        workflow/scripts/nccm_analysis.sh {input.ncm} {input.gene_set} \
+        {params.phyloP_threshold} {output}
         """
 
 rule nccms:
     input:
         "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"] + ".scan.tsv",
-        "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"] + ".top_nccm_genes_spim.tsv",
-        "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"] + ".top_nccm_genes.list"
     params:
         prefix = "results/nccms/" + config["run_name"] + ".phylop-" + config["phyloP_threshold"]
