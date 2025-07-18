@@ -1,5 +1,7 @@
 run_name: "cOSA_test"
+start_from: "vcf"
 vcfs: "config/example.input.tsv"
+matrix_path: ""
 spim: "separated"
 genome: "canFam4.0"
 phyloP: "/proj/uppstore2017228/KLT.04.200M/200m_MD_PhyloP_scores/scores.PhyloP.dog_v4_mdong_241MAMMALS"
