@@ -19,6 +19,14 @@ Make sure the chromosome notation is consistent across all input and resource da
 
 In the config file `config/config.yaml`, change `vcfs: "config/example.input.tsv"` to the name of your input tsv file. Also, set `spim:` to either  `"separated"` or `"combined"`, depending on whether you provided one or two vcf files.
 
+- `start_from`: `"vcf"` or `"matrix"`
+
+    - depending on `start_from` either of the following two must be set:
+
+    - `vcfs`: path to the input tsv file described above
+
+    - `matrix`: path to a pre-existing matrix
+
 - `genome`: Genome input for [snpEff](https://pcingola.github.io/SnpEff/snpeff/introduction/) - e.g. GRCh37.75
 
 - `phyloP`: Path for the directory of phyloP score files
@@ -36,11 +44,10 @@ Tested with the followinng software versions.
 - Snakemake (version 7.8.5)
 - BEDOPS (version 2.4.39)
 - snpEff (version 4.3t)
-- vcftools (version 0.1.12)
 - python3 (version 3.9.5)
 - BEDTools (version 2.29.2)
 
-On Uppmax do `module load bioinfo-tools snakemake/7.8.5 BEDOPS/2.4.39 snpEff/4.3t vcftools/0.1.12 python3/3.9.5 BEDTools/2.29.2`
+On Uppmax do `module load bioinfo-tools snakemake/7.8.5 BEDOPS/2.4.39 snpEff/4.3t python3/3.9.5 BEDTools/2.29.2`
 
 ## Run
 
