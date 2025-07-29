@@ -21,19 +21,24 @@ parser.add_argument('-o', '--out', type=str)
 
 args = parser.parse_args()
 
+def get_input_lists(in_file):
+    with open(in_file, 'r') as f:
+        in_list = [line.strip() for line in f]
+    return in_list
+
 # Make dataframe
-files_dict = {'sample':     args.samples.split(),
-              'spm_ann':    args.spm_anns.split(),
-              'sim_ann':    args.sim_anns.split(),
-              'spm_phylop': args.spm_phylops.split(),
-              'sim_phylop': args.sim_phylops.split()}
+files_dict = {'sample':     get_input_lists(args.samples),
+              'spm_ann':    get_input_lists(args.spm_anns),
+              'sim_ann':    get_input_lists(args.sim_anns),
+              'spm_phylop': get_input_lists(args.spm_phylops),
+              'sim_phylop': get_input_lists(args.sim_phylops)}
 
 if args.spim_vcfs:
-    files_dict['spim_vcf'] = args.spim_vcfs.split()
+    files_dict['spim_vcf'] = get_input_lists(args.spim_vcfs)
 
 else:
-    files_dict['spm_vcf'] = args.spm_vcfs.split()
-    files_dict['sim_vcf'] = args.sim_vcfs.split()
+    files_dict['spm_vcf'] = get_input_lists(args.spm_vcfs)
+    files_dict['sim_vcf'] = get_input_lists(args.sim_vcfs)
     
             
 files = pd.DataFrame(data=files_dict)
