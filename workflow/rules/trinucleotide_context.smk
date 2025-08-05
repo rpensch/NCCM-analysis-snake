@@ -1,6 +1,6 @@
 import os
 
-# Count "neutral" NCNC position trinucleotide contexts across the genome
+# Get the trinucleotide context of potential NCCM sites as NCC positions per gene
 rule split_coding_bed:
     input:
         config['coding_bed']
@@ -11,40 +11,6 @@ rule split_coding_bed:
         awk -v chr='{wildcards.chrom}' -v OFS='\t' '$1==chr' {input} > {output}
         """
 
-rule count_ncnc_trinus:
-    input:
-        coding_bed = "results/trinuc/coding.{chrom}.bed",
-        phyloP = config['phyloP'] + "/" + "{chrom}.bed.gz",
-        ref_fasta = config['ref_fasta']
-    output:
-        temp("results/trinuc/" + config["genome"] + ".phylop-" + config["phyloP_threshold"] + ".ncnc_positions_trinuc_counts.{chrom}.tsv")
-    params:
-        phyloP_threshold = config["phyloP_threshold"]
-    shell:
-        """
-        zcat {input.phyloP} | awk -v phylop="{params.phyloP_threshold}" '$5<phylop' | 
-        bedtools subtract -a stdin -b {input.coding_bed} | 
-        awk -v OFS='\t' '$2 > 0 {{print $1,$2-1,$3+1}}' | \
-        bedtools getfasta -fi {input.ref_fasta} -bed stdin -bedOut | \
-        cut -f 4 | grep -v "N" | sort | uniq -c | awk -v OFS='\t' '{{print $2,$1}}' \
-        > {output}
-        """
-
-rule total_ncnc_trinucs:
-    input:
-        expand(["results/trinuc/" + config["genome"] + ".phylop-" + config["phyloP_threshold"] + ".ncnc_positions_trinuc_counts.{chrom}.tsv"], chrom = chromosomes),
-    output:
-        "results/trinuc/" + config["genome"] + ".phylop-" + config["phyloP_threshold"] + ".ncnc_positions_trinuc_counts.tsv"
-    shell:
-        """
-        workflow/scripts/combine_ncnc_trinucs.py --counts '{input}' --output {output}
-        """
-
-rule ncnc_trinucs:
-    input: 
-        "results/trinuc/" + config["genome"] + ".phylop-" + config["phyloP_threshold"] + ".ncnc_positions_trinuc_counts.tsv"
-
-# Get the trinucleotide context of potential NCCM sites as NCC positions per gene
 rule split_gene_flanks:
     input:
         gene_set = config["gene_set"]
