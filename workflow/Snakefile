@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 
 configfile: "config/config.yaml"
 report: "workflow/reports/workflow.rst"
@@ -6,7 +7,13 @@ report: "workflow/reports/workflow.rst"
 vcfs = pd.read_table(config["vcfs"]).set_index("sample", drop=False)
 samples = list(vcfs["sample"])
 spims = ['spm','sim']
+with open(config['chrom_list']) as f:
+    chromosomes = f.read().splitlines()
 
+# Helper functions
+include: "rules/helper.smk"
+
+# Main process
 include: "rules/preprocess_vcf.smk"
 include: "rules/snpEff.smk"
 include: "rules/phylop_annotate.smk"
@@ -14,4 +21,8 @@ include: "rules/summarize_annotation.smk"
 include: "rules/create_matrix.smk"
 include: "rules/nccm_analysis.smk"
 include: "rules/collect_results.smk"
+
+# Create supporting data
+include: "rules/count_constraint_positions.smk"
 include: "rules/trinucleotide_context.smk"
+include: "rules/gene_qc.smk"
