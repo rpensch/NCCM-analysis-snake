@@ -1,34 +1,12 @@
-import os
-
 # Get the trinucleotide context of potential NCCM sites as NCC positions per gene
-rule split_coding_bed:
-    input:
-        config['coding_bed']
-    output:
-        temp("results/trinuc/coding.{chrom}.bed")
-    shell:
-        """
-        awk -v chr='{wildcards.chrom}' -v OFS='\t' '$1==chr' {input} > {output}
-        """
-
-rule split_gene_flanks:
-    input:
-        gene_set = config["gene_set"]
-    output:
-        temp("results/trinuc/gene_set.{chrom}.bed")
-    shell:
-        """
-        awk -v chr='{wildcards.chrom}' -v OFS='\t' '$1==chr' {input} > {output}
-        """
-
-rule count_gene_ncc_trinucs:
+rule count_gene_ncc_trinucs_chr:
     input: 
-        coding_bed = "results/trinuc/coding.{chrom}.bed",
-        gene_flanks = "results/trinuc/gene_set.{chrom}.bed",
+        coding_bed = "results/resources/coding.{chrom}.bed",
+        gene_flanks = "results/resources/gene_set.{chrom}.bed",
         phyloP = config['phyloP'] + "/" + "{chrom}.bed.gz",
         ref_fasta = config['ref_fasta']
     output:
-        temp("results/trinuc/gene_flanks.ncc_positions_trinuc_counts.{chrom}.tsv")
+        temp("results/resources/gene_flanks.ncc_positions_trinuc_counts.{chrom}.tsv")
     params:
         phyloP_threshold = config["phyloP_threshold"]
     shell:
@@ -42,16 +20,17 @@ rule count_gene_ncc_trinucs:
         > {output}
         """
 
-rule total_gene_ncc_trinucs:
+rule combine_gene_ncc_trinucs:
     input:
         gene_set = config["gene_set"],
-        counts = expand(["results/trinuc/gene_flanks.ncc_positions_trinuc_counts.{chrom}.tsv"], chrom = chromosomes)
+        counts = expand(["results/resources/gene_flanks.ncc_positions_trinuc_counts.{chrom}.tsv"], chrom = chromosomes)
     output:
-        'results/trinuc/'+'.'.join(os.path.basename(config["gene_set"]).split('.')[:-1])+".ncc_positions_trinuc_counts.tsv"
+        'results/resources/'+'.'.join(os.path.basename(config["gene_set"]).split('.')[:-1])+".ncc_positions_trinuc_counts.tsv"
     shell:
         """
         workflow/scripts/combine_gene_ncc_trinucs.py --counts '{input.counts}' --gene_flanks {input.gene_set} --output {output}
         """
 
 rule gene_ncc_trinucs:
-    input: 'results/trinuc/'+'.'.join(os.path.basename(config["gene_set"]).split('.')[:-1])+".ncc_positions_trinuc_counts.tsv"
+    input: 'results/resources/'+'.'.join(os.path.basename(config["gene_set"]).split('.')[:-1])+".ncc_positions_trinuc_counts.tsv"
+
