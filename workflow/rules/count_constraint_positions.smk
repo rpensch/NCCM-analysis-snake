@@ -9,7 +9,7 @@ rule subtract_coding:
         """
         bedtools merge -i {input.coding} |
         bedtools subtract -a {input.flanks} -b stdin |
-        sort -k1,1 -2,2n > {output}
+        sort -k1,1 -k2,2n > {output}
         """
 
 rule constraint_pos:
