@@ -57,9 +57,6 @@ if config["phyloP_format"] == "bw":
 
 elif config["phyloP_format"] == "bed":
 
-    with open(config['chrom_list']) as f:
-        chromosomes = f.read().splitlines()
-
     rule split_chroms:
         input:  "results/input_beds/{sample}.{spim}.sorted.bed"
         output: temp("results/input_beds/{sample}.{spim}.sorted.{chrom}.bed")
