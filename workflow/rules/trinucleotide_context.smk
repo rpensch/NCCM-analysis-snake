@@ -25,12 +25,15 @@ rule combine_gene_ncc_trinucs:
         gene_set = config["gene_set"],
         counts = expand(["results/resources/gene_flanks.ncc_positions_trinuc_counts.{chrom}.tsv"], chrom = chromosomes)
     output:
-        'results/resources/'+'.'.join(os.path.basename(config["gene_set"]).split('.')[:-1])+".ncc_positions_trinuc_counts.tsv"
+        'results/resources/'+'.'.join(os.path.basename(config["gene_set"]).split('.')[:-1])+ \
+        'phylop' + config['phyloP_threshold']'.ncc_positions_trinuc_counts.tsv'
     shell:
         """
         workflow/scripts/combine_gene_ncc_trinucs.py --counts '{input.counts}' --gene_flanks {input.gene_set} --output {output}
         """
 
 rule gene_ncc_trinucs:
-    input: 'results/resources/'+'.'.join(os.path.basename(config["gene_set"]).split('.')[:-1])+".ncc_positions_trinuc_counts.tsv"
+    input: 
+        'results/resources/'+'.'.join(os.path.basename(config["gene_set"]).split('.')[:-1])+ \
+        'phylop' + config['phyloP_threshold']'.ncc_positions_trinuc_counts.tsv'
 

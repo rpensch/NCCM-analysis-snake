@@ -66,7 +66,8 @@ rule merge_phylop_counts:
         nccps=expand(["results/resources/{chrom}.noncoding_flanks.constraint_counts.bed"], chrom = chromosomes),
         ncncps=expand(["results/resources/{chrom}.noncoding_flanks.nonconstraint_counts.bed"], chrom = chromosomes)
     output:
-        'results/resources/'+'.'.join(os.path.basename(config["gene_set"]).split('.')[:-1])+".phylop_counts.bed"
+        'results/resources/'+'.'.join(os.path.basename(config["gene_set"]).split('.')[:-1])+\
+        '.phylop' + config['phyloP_threshold'] + '.phylop_counts.bed'
     shell:
         """
         workflow/scripts/merge_nc_phylop_positions.py \
@@ -75,4 +76,6 @@ rule merge_phylop_counts:
         """
 
 rule phylop_counts:
-    input: 'results/resources/'+'.'.join(os.path.basename(config["gene_set"]).split('.')[:-1])+".phylop_counts.bed"
+    input: 
+        'results/resources/'+'.'.join(os.path.basename(config["gene_set"]).split('.')[:-1])+\
+        '.phylop' + config['phyloP_threshold'] + '.phylop_counts.bed'
