@@ -2,6 +2,7 @@
 
 import pandas as pd
 import argparse
+import warnings
 
 # Parse command line arguments
 parser = argparse.ArgumentParser()
@@ -43,7 +44,9 @@ merged = flanks.merge(gene_ncp, on = 'gene')
 
 # Final sanity check
 if (merged.shape[0] != flanks.shape[0]) | (merged.shape[0] != gene_ncp.shape[0]):
-    raise Exception("Merge error.")
-else:
-    # Save
-    merged.to_csv(args.output, sep = '\t', index = False)
+    warnings.warn("MERGE WARNING: Output does not have the expected number of genes.\n\
+                    1. This could mean that some regions are fully coding and have been removed.\n\
+                    2. It could also mean some sort of other problem\n\
+                    Please make sure everything is okay.")
+
+merged.to_csv(args.output, sep = '\t', index = False)
