@@ -108,3 +108,10 @@ Main output files:
 - `results/composite_matrix/*.composite_matrix.tsv.gz` - includes all annotation data (snpeff + phyloP) for all samples. Missing phylop cores are `NaN`. 
 
 - `results/nccms/*scan.tsv` - this is the main output.
+
+## Acknowledgements
+
+This project uses code adapted from **CombiningDependentPvaluesUsingEBM** by William Poole.
+* **Source:** [Link to the GitHub Repository](https://github.com/IlyaLab/CombiningDependentPvaluesUsingEBM)
+* **License:** Apache 2.0
+* **File:** The file `src/nccm_enrichment/vendor/EmpiricalBrownsMethod.py` is from [here](https://github.com/IlyaLab/CombiningDependentPvaluesUsingEBM/blob/master/Python/EmpiricalBrownsMethod.py).

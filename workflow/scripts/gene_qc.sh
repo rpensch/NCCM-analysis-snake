@@ -4,6 +4,7 @@ GENE_SET=$1
 QC_BED=$2
 OUT=$3
 
+printf "chrom\tlflank\tuflank\tgene\tfaction_pass\n" > $OUT
 bedtools intersect -sorted -wao -a $GENE_SET -b $QC_BED |
 awk '
 BEGIN { OFS="\t" }
@@ -26,9 +27,9 @@ END {
         bp_overlap = overlap[gene]
         gene_len = gene_length[gene]
 
-        percent_overlap = (bp_overlap / gene_len) * 100
+        percent_overlap = 1 - (bp_overlap / gene_len) # Fraction of gene that pass QC, which means not overlapping poor quality regions 
 
         # Print the final result
         printf "%s\t%s\t%f\n", gene_info[gene], gene, percent_overlap
     }
-}' | sort -k1,1 -k2,2n > $OUT
+}' | sort -k1,1 -k2,2n >> $OUT
