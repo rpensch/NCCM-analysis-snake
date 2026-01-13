@@ -13,3 +13,5 @@ results
 store
 input_beds
 *__pycache__*
+data
+*egg-info
