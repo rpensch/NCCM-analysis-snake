@@ -14,12 +14,12 @@ parser.add_argument('--output', type=str)
 args = parser.parse_args()
 
 # Load the results for the separate non-coding regions of each gene
-nccp = pd.concat([pd.read_csv(nccp_file, 
+nccp = pd.concat([pd.read_csv(nccp_file,
                         sep = '\t', header = None, names = ['chrom','start','end','gene','nccp']) 
                         for nccp_file in args.nccp.split()])
 nccp['region_length'] = nccp['end'] - nccp['start']
 
-ncncp = pd.concat([pd.read_csv(ncncp_file, 
+ncncp = pd.concat([pd.read_csv(ncncp_file,
                         sep = '\t', header = None, names = ['chrom','start','end','gene','ncncp']) 
                         for ncncp_file in args.ncncp.split()])
 ncncp['region_length'] = ncncp['end'] - ncncp['start']
@@ -41,6 +41,10 @@ gene_ncp['phylop_cov'] = (gene_ncp['nccp'] + gene_ncp['ncncp']) / gene_ncp['regi
 # merge back to the flank bed
 flanks = pd.read_csv(args.gene_set, sep = '\t', header = None, names = ['chrom','lflank','uflank','gene'])
 merged = flanks.merge(gene_ncp, on = 'gene')
+
+# Calculate fraction of non-coding region
+merged['overall_region'] = merged['uflank'] - merged['lflank']
+merged['frac_noncoding_region'] = merged['region_length']/merged['overall_region']
 
 # Final sanity check
 if (merged.shape[0] != flanks.shape[0]) | (merged.shape[0] != gene_ncp.shape[0]):
