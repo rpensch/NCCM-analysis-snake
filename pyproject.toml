@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nccm_enrichment"
+version = "0.1.0"
+description = "A framework for identifying genes with non-coding constraint mutations (NCCMs)."
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "Apache-2.0"}
+authors = [
+  {name = "Raphaela Pensch", email = "rar.pensch@gmail.com"}
+]
+dependencies = [
+  "pandas",
+  "numpy",
+  "statsmodels",
+  "scipy",
+  "click"  # We will use this for the CLI later
+]
+
+# This creates the command line executable!
+[project.scripts]
+cancer-stat = "cancer_constraints.cli:main"
