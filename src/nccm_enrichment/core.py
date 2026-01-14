@@ -9,6 +9,7 @@ from sklearn.preprocessing import StandardScaler
 import numpy as np
 from .vendor import EmpiricalBrownsMethod
 from functools import reduce
+import warnings
 
 @dataclass
 class ModelParams:
@@ -33,6 +34,8 @@ class ModelParams:
         Whether to drop raw p-values from the output (for debugging purposes).
     n_bins: int
         Number of bins to split the data into for binned regression.
+    optimize_n_bins: bool
+        Whether to optimize the number of bins.
     binning_col: str
         Column name to use for binning the data.
     fdr_thresh: float
@@ -55,6 +58,7 @@ class ModelParams:
 
     # Binning stragegy
     n_bins: int = 10
+    optimize_n_bins: bool = True
     binning_col: str = 'ncncm_rate'
 
     # Gene-centric approach
@@ -181,18 +185,39 @@ def run_gamma_poisson_regression(df, params: ModelParams = None, **kwargs):
     # Define offset as the number of NCC positions
     offset = np.log(df_out[params.offset_col]).astype(np.float64)
 
-    # Run the Regression
-    model = sm.NegativeBinomial(y, x, offset = offset)
-    results = model.fit(maxiter=params.maxiter, method = params.method)
+    # Catch warnings during model fitting
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+        
+        # Run the Regression
+        model = sm.NegativeBinomial(y, x, offset = offset)
+        results = model.fit(maxiter=params.maxiter, method = params.method)
+
+    # Process caught warnings
+    hessian_inversion = True
+    runtime = True
+    for w in caught_warnings:
+        # Check for hession inversion fail warning
+        if 'Inverting hessian failed' in str(w.message):
+            # Handle hessian inversion failure
+            hessian_inversion = False
+        elif w.category == RuntimeWarning:
+            # Handle runtime warning
+            runtime = False
+        else:
+        # Re-emit all other caught warnings
+            warnings.warn_explicit(
+                message=w.message,
+                category=w.category,
+                filename=w.filename,
+                lineno=w.lineno
+            )
 
     # Calculate alpha dispersion (for posthoc testing)
     alpha_dispersion = results.params['alpha'] #len(params.covariates_list)+1
 
-    # Check if the model converged
-    if results.converged:
-        return results, alpha_dispersion
-    else:
-        raise Exception("Gamma poisson regression failed to converge. Exiting.")
+    # Check if the model converged and return results
+    return results, alpha_dispersion, results.converged, hessian_inversion, runtime
 
 def test_nccm_enrichment(df, results, alpha_dispersion, params: ModelParams = None, **kwargs):
     """
@@ -301,25 +326,56 @@ def nccm_enrichment_analysis(df, params: ModelParams = None, **kwargs):
         else:
             raise ValueError(f"Unknown parameter: {key}")
 
-    # Split the data into bins based on the binning column
-    dfs_bin = np.array_split(df.sort_values([params.binning_col, 'gene']), params.n_bins)
+    # Optimize number of bins if specified so that all bins converge
+    for b in range(params.n_bins, 0, -1):
+        # Split the data into bins based on the binning column
+        dfs_bin = np.array_split(df.sort_values([params.binning_col, 'gene']), b)
 
-    # Run the analysis for each bin
-    df_results_total = pd.DataFrame()
-    for i, df_bin in enumerate(dfs_bin):
+        # Run the analysis for each bin
+        df_results_total = pd.DataFrame()
+        for i, df_bin in enumerate(dfs_bin):
 
-        # Run regression and post-hoc testing
-        results, alpha_dispersion = run_gamma_poisson_regression(df_bin, params)
+            # Run regression and post-hoc testing
+            results, alpha_dispersion, covergance, hessian_inversion, runtime = run_gamma_poisson_regression(df_bin, params)
 
-        df_results = test_nccm_enrichment(df_bin, results, alpha_dispersion, params)
+            # If a bin fails to converge, handle according to optimize_n_bins
+            if not covergance:
+                if params.optimize_n_bins:
+                    print(f"Gamma poisson regression failed to converge in bin {i+1} with n_bins = {b}. Trying with fewer bins...")
+                    break
+                else:
+                    raise Exception(f"Gamma poisson regression failed to converge in bin {i+1} with n_bins = {b}. Optimizing number of bins is disabled. Exiting.")
+            elif not hessian_inversion:
+                if params.optimize_n_bins:
+                    print(f"Gamma poisson regression hessian inversion failed in bin {i+1} with n_bins = {b}. Trying with fewer bins...")
+                    break
+                else:
+                    raise Exception(f"Gamma poisson regression hessian inversion failed in bin {i+1} with n_bins = {b}. Optimizing number of bins is disabled. Exiting.")
+            elif not runtime:
+                if params.optimize_n_bins:
+                    print(f"Gamma poisson regression runtime warning in bin {i+1} with n_bins = {b}. Trying with fewer bins...")
+                    break
+                else:
+                    raise Exception(f"Gamma poisson regression runtime warning in bin {i+1} with n_bins = {b}. Optimizing number of bins is disabled. Exiting.")
+            else:
+                df_results = test_nccm_enrichment(df_bin, results, alpha_dispersion, params)
 
-        # Append results
-        df_results_total = pd.concat([df_results_total, df_results])
+                # Append results
+                df_results_total = pd.concat([df_results_total, df_results])
+            
+        # If all bins converged successfully, exit the loop and continue
+        if df_results_total.shape[0] == df.shape[0]:
+            print(f"All bins converged with n_bins = {b}.")
+            break
+
+        # If not all bins converged and we are out of bins, raise an error
+        if b == 1:
+            raise Exception("Gamma poisson regression failed to converge in all bins. Exiting.")
 
     # To randomize or not to randomize
     if params.randomized_p:
         np.random.seed(410)
-        df_results_total['p_value'] = np.random.uniform(df_results_total['raw_p_lower'], 
+        df_results_total['p_value'] = np.random.uniform(df_results_total['raw_p_lower'],
                                                         df_results_total['raw_p_upper'])
     else:
         df_results_total['p_value'] = df_results_total['raw_p_value']
@@ -393,8 +449,8 @@ def combine_pvalues_browns_method(df, params: ModelParams = None, **kwargs):
         # Run Brown's Method
         try:
             p_brown, p_fisher, scale, degf = EmpiricalBrownsMethod(
-                data_matrix, 
-                current_p_values, 
+                data_matrix,
+                current_p_values,
                 extra_info=True
             )
             brown_p_values.append(p_brown)
