@@ -170,17 +170,6 @@ def run_gamma_poisson_regression(df, params: ModelParams = None, **kwargs):
     # Define dependent variable as NCCM count
     y = df_out[params.y_col].astype(np.float64)
 
-    # Generage background mutation rate covariate
-    if ('scaled_log_ncncm_rate' in params.covariates_list):
-        if 'ncncm_rate' not in df_out.columns:
-            # Calculate background mutation rate
-            df_out['ncncm_rate'] = df_out[params.background_mutation_count_col]/df_out['ncncp']
-
-        # Scaled log transformed background mutation rate
-        df_out['log_ncncm_rate'] = np.log1p(df_out['ncncm_rate'])
-        scaler = StandardScaler()
-        df_out['scaled_log_ncncm_rate']= scaler.fit_transform(df_out[['log_ncncm_rate']])
-
     # Define the covariates and the intercept to be estimated
     x = pd.DataFrame(index=df_out.index)
     x['intercept'] = 1.0
@@ -334,6 +323,13 @@ def nccm_enrichment_analysis(df, params: ModelParams = None, **kwargs):
     # Create ncncm rate column is necessary
     if params.binning_col == 'ncncm_rate':
         df['ncncm_rate'] = df[params.background_mutation_count_col]/df['ncncp']
+
+    # Generage background mutation rate covariate
+    if ('scaled_log_ncncm_rate' in params.covariates_list):
+        # Scaled log transformed background mutation rate
+        df['log_ncncm_rate'] = np.log1p(df['ncncm_rate'])
+        scaler = StandardScaler()
+        df['scaled_log_ncncm_rate']= scaler.fit_transform(df[['log_ncncm_rate']])
 
     # Optimize number of bins if specified so that all bins converge
     for b in range(params.n_bins, 0, -1):
