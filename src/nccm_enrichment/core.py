@@ -22,6 +22,8 @@ class ModelParams:
         Column name for the dependent variable (NCCM count).
     offset_col: str
         Column name for the offset variable (NCC positions).
+    background_mutation_count_col: str
+        Column name for the background mutation count, used to calculate background rate.
     covariates_list: List[str]
         List of column names for covariates to include in the regression.
     maxiter: int
@@ -38,6 +40,9 @@ class ModelParams:
         Whether to optimize the number of bins.
     binning_col: str
         Column name to use for binning the data.
+    flank_suffixes: list
+        For the gene centric approach, list of suffix labels for the flank regions that are to be merged
+    
     fdr_thresh: float
         FDR threshold for multiple testing correction.
     """
@@ -167,14 +172,14 @@ def run_gamma_poisson_regression(df, params: ModelParams = None, **kwargs):
 
     # Generage background mutation rate covariate
     if ('scaled_log_ncncm_rate' in params.covariates_list):
-        if ('ncncm_count' in df_out.columns) & ('ncncp' in df_out.columns):
+        if 'ncncm_rate' not in df_out.columns:
             # Calculate background mutation rate
             df_out['ncncm_rate'] = df_out[params.background_mutation_count_col]/df_out['ncncp']
 
-            # Scaled log transformed background mutation rate
-            df_out['log_ncncm_rate'] = np.log1p(df_out['ncncm_rate'])
-            scaler = StandardScaler()
-            df_out['scaled_log_ncncm_rate']= scaler.fit_transform(df_out[['log_ncncm_rate']])
+        # Scaled log transformed background mutation rate
+        df_out['log_ncncm_rate'] = np.log1p(df_out['ncncm_rate'])
+        scaler = StandardScaler()
+        df_out['scaled_log_ncncm_rate']= scaler.fit_transform(df_out[['log_ncncm_rate']])
 
     # Define the covariates and the intercept to be estimated
     x = pd.DataFrame(index=df_out.index)
@@ -325,6 +330,10 @@ def nccm_enrichment_analysis(df, params: ModelParams = None, **kwargs):
             setattr(params, key, value)
         else:
             raise ValueError(f"Unknown parameter: {key}")
+
+    # Create ncncm rate column is necessary
+    if params.binning_col == 'ncncm_rate':
+        df['ncncm_rate'] = df[params.background_mutation_count_col]/df['ncncp']
 
     # Optimize number of bins if specified so that all bins converge
     for b in range(params.n_bins, 0, -1):
