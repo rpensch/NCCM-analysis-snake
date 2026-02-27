@@ -49,7 +49,7 @@ class ModelParams:
     # Regression parameters
     y_col: str = 'nccm_count'
     offset_col: str = 'nccp'
-    background_mutation_count_col = 'ncncm_count'
+    background_mutation_count_col: str = 'ncncm_count'
     covariates_list: List[str] = field(default_factory=lambda:
                     ['scaled_log_ncncm_rate','scaled_log_perc_gc','scaled_log_perc_cpg',
                     'scaled_log_perc_tpc', 'scaled_log_perc_tpa','scaled_log_perc_open',
