@@ -263,7 +263,7 @@ def test_nccm_enrichment(df, results, alpha_dispersion, params: ModelParams = No
     df_results['raw_p_upper'] = p_upper
     df_results['raw_p_lower'] = p_lower
 
-    return df_results
+    return df_results, results
 
 def multiple_testing_correction(df, params: ModelParams = None, p_col = 'p_value', **kwargs):
     """
@@ -297,6 +297,10 @@ def multiple_testing_correction(df, params: ModelParams = None, p_col = 'p_value
     df_out = df_out.sort_values(by=[q_col], ascending=True)
 
     return df_out
+
+def randomize_row(row):
+            rs = np.random.RandomState(row['seed'] % (2**32))
+            return rs.uniform(row['raw_p_lower'], row['raw_p_upper'])
 
 def nccm_enrichment_analysis(df, params: ModelParams = None, **kwargs):
     """
@@ -338,6 +342,7 @@ def nccm_enrichment_analysis(df, params: ModelParams = None, **kwargs):
 
         # Run the analysis for each bin
         df_results_total = pd.DataFrame()
+        results_total = []
         for i, df_bin in enumerate(dfs_bin):
 
             # Run regression and post-hoc testing
@@ -363,10 +368,11 @@ def nccm_enrichment_analysis(df, params: ModelParams = None, **kwargs):
                 else:
                     raise Exception(f"Gamma poisson regression runtime warning in bin {i+1} with n_bins = {b}. Optimizing number of bins is disabled. Exiting.")
             else:
-                df_results = test_nccm_enrichment(df_bin, results, alpha_dispersion, params)
+                df_results, results = test_nccm_enrichment(df_bin, results, alpha_dispersion, params)
 
                 # Append results
                 df_results_total = pd.concat([df_results_total, df_results])
+                results_total.append(results)
             
         # If all bins converged successfully, exit the loop and continue
         if df_results_total.shape[0] == df.shape[0]:
@@ -379,9 +385,9 @@ def nccm_enrichment_analysis(df, params: ModelParams = None, **kwargs):
 
     # To randomize or not to randomize
     if params.randomized_p:
-        np.random.seed(410)
-        df_results_total['p_value'] = np.random.uniform(df_results_total['raw_p_lower'],
-                                                        df_results_total['raw_p_upper'])
+        df_results_total['seed'] = pd.util.hash_pandas_object(df_results_total['gene'], index=False)
+
+        df_results_total['p_value'] = df_results_total.apply(lambda row: randomize_row(row), axis=1)
     else:
         df_results_total['p_value'] = df_results_total['raw_p_value']
 
@@ -390,7 +396,7 @@ def nccm_enrichment_analysis(df, params: ModelParams = None, **kwargs):
         df_results_total = df_results_total.drop(columns = ['raw_p_value','raw_p_upper',
                                                             'raw_p_lower']).reset_index(drop=True)
 
-    return df_results_total
+    return df_results_total, results_total
 
 def combine_pvalues_browns_method(df, params: ModelParams = None, **kwargs):
     """
@@ -550,9 +556,9 @@ def window_based_approach(df, params: ModelParams = None, **kwargs):
         else:
             raise ValueError(f"Unknown parameter: {key}")
     
-    results = nccm_enrichment_analysis(df, params)
+    results, reg_results = nccm_enrichment_analysis(df, params)
     results = multiple_testing_correction(results, params)
-    return results
+    return results, reg_results
 
 def gene_centric_approach(*dataframes, params: ModelParams = None, **kwargs):
     """
@@ -597,11 +603,12 @@ def gene_centric_approach(*dataframes, params: ModelParams = None, **kwargs):
     data_map = dict(zip(params.flank_suffixes, dataframes))
     
     results_list = []
+    reg_results_list = []
 
     # Run analysis for each dataframe
     for suffix, df_input in data_map.items():
         # Run core analysis
-        df_res = nccm_enrichment_analysis(df_input, params)
+        df_res, reg_results = nccm_enrichment_analysis(df_input, params)
 
         # Rename columns (Everything except 'gene')
         rename_mapping = {
@@ -612,6 +619,8 @@ def gene_centric_approach(*dataframes, params: ModelParams = None, **kwargs):
         df_res_renamed = df_res.rename(columns=rename_mapping)
         
         results_list.append(df_res_renamed)
+        reg_results_list.append(reg_results)
+
 
     # Merge sequentially
     merged_results = reduce(
@@ -626,4 +635,4 @@ def gene_centric_approach(*dataframes, params: ModelParams = None, **kwargs):
     merged_results['p_brown_gc'] = apply_genomic_control_zscore(merged_results['p_brown'])
     merged_results = multiple_testing_correction(merged_results, params, p_col='p_brown_gc')
 
-    return merged_results
+    return merged_results, reg_results_list
