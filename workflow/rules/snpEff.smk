@@ -8,6 +8,6 @@ rule snpEff:
         config["genome"]
     shell:
         """
-        snpEff ann -noStats {params} {input.vcf} |
+        snpEff -Xmx8g ann -noStats {params} {input.vcf} |
         gzip -c > {output}
         """
