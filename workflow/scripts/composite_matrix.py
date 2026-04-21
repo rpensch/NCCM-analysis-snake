@@ -59,7 +59,7 @@ composite['coding_type'] = composite['annotation_impact'].apply(lambda x: get_co
 
 # If possible, get the VAF
 tumour_sample = get_tumour_sample(args.ann)
-if type(tumour_sample) == str:
+if (type(tumour_sample) == str) and (tumour_sample.lower() in composite.columns):
     composite['vaf'] = composite.apply(lambda x: extract_vaf(x['format'], x[tumour_sample.lower()]), axis = 1)
 else:
     composite['vaf'] = float('NaN')
