@@ -5,7 +5,7 @@
 
 The **NCCM (Non-Coding Constraint Mutation) analysis pipeline** is a Snakemake workflow designed to identify genes and regulatory genomic regions significantly enriched for somatic mutations in evolutionary constrained non-coding positions.
 
-In cancer genomics, the vast majority of somatic variants fall within non-coding regions, making it challenging to differentiate driver events from neutral passenger mutations. This pipeline addresses this challenge by combining functional variant annotation, cross-species evolutionary conservation (phyloP), and genomic covariates to detect non-coding driver candidates.
+In cancer genomics, the vast majority of somatic variants fall within non-coding regions, where it is challenging to differentiate driver events from neutral passenger mutations. This pipeline addresses this challenge by combining functional variant annotation, cross-species evolutionary conservation (phyloP), and genomic covariates to detect non-coding driver candidates.
 
 ```mermaid
 flowchart TD
