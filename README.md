@@ -1,5 +1,81 @@
 
-# NCCM-analysis pipeline
+# NCCM-analysis pipeline
+
+## Overview
+
+The **NCCM (Non-Coding Constraint Mutation) analysis pipeline** is a Snakemake workflow designed to identify genes and regulatory genomic regions significantly enriched for somatic mutations in evolutionary constrained non-coding positions.
+
+In cancer genomics, the vast majority of somatic variants fall within non-coding regions, making it challenging to differentiate driver events from neutral passenger mutations. This pipeline addresses this challenge by combining functional variant annotation, cross-species evolutionary conservation (phyloP), and genomic covariates to detect non-coding driver candidates.
+
+```mermaid
+flowchart TD
+    subgraph Inputs ["Inputs & Resources"]
+        VCF["Somatic VCFs"]
+        PHY["PhyloP conservation scores"]
+        REG["Regions of Interest (BED)"]
+        COD["Coding regions (BED)"]
+        QC["Genomic QC data (BED)\nMappability, phyloP coverage, etc."]
+        COVARIATE["Genomic covariate data"]
+        COVARIATE --> COVARIATEBED["Covariate data (BED)"]
+        COVARIATE --> COVARIATEOTHER["Covariate data (Other)"]
+
+    end
+
+    subgraph Step1 ["1. Variant annotation & integration"]
+        VCF --> PRE["Preprocess & separate SPMs and SIMs"]
+        PRE --> SNPEFF["SnpEff annotation"]
+        SNPEFF --> CODING["Identify coding vs. non-coding mutations"]
+        PRE & PHY --> PHYANNOT["PhyloP score annotation"]
+        CODING & PHYANNOT --> MATRIX["Composite variant matrix"]
+    end
+
+    subgraph Step2 ["2. Supporting data"]
+        COD & QCREG --> NONCOD["Subtract coding regions from regions of interest"]
+        PHY & NONCOD --> POS["Count constraint positions (NCCP and NCNCP)"]
+        REG & QC --> QC_OV["Calculate overlap with QC data"]
+        QC_OV --> QCREG["Identify high quality regions"]
+        COVARIATEBED & QCREG --> COVARIATEBED_OV["Calculate overlap covariate data"]
+    end
+
+    subgraph Step3 ["3. Regional Mutation Scanning"]
+        MATRIX & QCREG --> SCAN["Generate NCCM & NCNCM counts per Region"]
+    end
+
+    subgraph Step4 ["4. Statistical enrichment"]
+        SCAN & POS & QCREG & COVARIATEBED_OV & COVARIATEOTHER --> REGRESS["Gamma-Poisson regression and\nNCCM enrichment testing"]
+    end
+```
+
+## Workflow
+
+1. **Variant annotation & integration**:
+   - Preprocesses somatic point mutations (SPMs) and somatic indels (SIMs) from single or separate sample VCFs.
+   - Annotates functional impact (coding vs. non-coding) using [snpEff](https://pcingola.github.io/SnpEff/).
+   - Maps base-pair evolutionary conservation using **phyloP** scores.
+   - Integrates sample VAFs, annotations, and conservation scores into an aggregated **composite matrix** (`results/composite_matrix/*composite_matrix.tsv.gz`).
+
+2. **Regional mutation scanning**:
+   - Intersects non-coding variants with user-defined regions of interest specified in a `gene_set` BED file (e.g. gene flanking regions or sliding windows).
+   - Generates counts per region for non-coding constrained mutations (NCCMs), non-constrained mutations (NCNCMs), and unique affected samples (`results/nccms/`).
+
+3. **Supporting baseline data generation**:
+   - **Constraint position counting (`phylop_counts`)**: Determines the exact number of non-coding constraint positions (NCCPs) and non-constraint positions (NCNCPs) per region after excluding coding protein-coding regions.
+   - **Quality Control & Covariates (`gene_qc`)**: Calculates region-level overlap with genomic QC data (e.g. low-mappability regions) and genomic covariates (e.g. ATAC-seq open chromatin peaks).
+
+4. **Downstream Statistical Testing (`nccm_enrichment`)**:
+   - Fits a **Gamma-Poisson (Negative Binomial) regression** using $\log(\text{NCCP})$ as an offset, controlling for background mutation rates (derived from NCNCMs) and genomic covariates (GC content, replication timing, chromatin accessibility, expression).
+   - Can use **Empirical Brown's Method** to combine p-values across multiple window/flank sizes (e.g. 5, 10, 50, and 100 kbp) while accounting for statistical dependency.
+   - Adjusts for multiple testing across all candidate regions using False Discovery Rate (FDR).
+
+### Key Concepts
+
+| Term | Full Name | Description |
+| :--- | :--- | :--- |
+| **NCCM** | Non-Coding Constraint Mutation | Somatic variant in a non-coding region occurring at an evolutionary constrained position ($\text{phyloP} \ge \text{threshold}$). |
+| **NCNCM** | Non-Coding Non-Constraint Mutation | Somatic variant in a non-coding region occurring at a non-constrained position ($\text{phyloP} < \text{threshold}$). Used to model local background mutation rate. |
+| **NCCP** | Non-Coding Constraint Position | Number of non-coding, evolutionary constrained base pairs within a target region (used as the regression offset). |
+| **NCNCP** | Non-Coding Non-Constraint Position | Number of non-coding, non-constrained base pairs within a target region. |
+| **Regions of Interest** | Gene Flanks / Sliding Windows | BED-formatted target intervals (e.g., promoters, gene-centric flanks, or sliding genomic windows) tested for NCCM burden. |
 
 ## Input 
 
