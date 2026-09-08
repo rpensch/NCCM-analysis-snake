@@ -46,6 +46,27 @@ flowchart TD
     end
 ```
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Workflow](#workflow)
+- [Key Concepts](#key-concepts)
+- [Repository Structure](#repository-structure)
+- [Installation & Software](#installation--software)
+- [Input Data](#input)
+- [Required Resources](#required-resources)
+- [Configuration](#config)
+- [Running the Pipeline](#run)
+  - [Quick Start](#quick-start)
+  - [Data Preparation (Supporting Data)](#data-preparation)
+  - [Downstream Statistical Enrichment](#downstream-statistical-enrichment)
+- [Output Files](#output)
+  - [Primary Outputs](#primary-outputs)
+  - [Supporting Data Outputs](#supporting-data-outputs)
+- [Acknowledgements](#acknowledgements)
+
+---
+
 ## Workflow
 
 1. **Variant annotation & integration**:
@@ -59,7 +80,7 @@ flowchart TD
    - Generates counts per region for non-coding constrained mutations (NCCMs), non-constrained mutations (NCNCMs), and unique affected samples (`results/nccms/`).
 
 3. **Supporting baseline data generation**:
-   - **Constraint position counting (`phylop_counts`)**: Determines the exact number of non-coding constraint positions (NCCPs) and non-constraint positions (NCNCPs) per region after excluding coding protein-coding regions.
+   - **Constraint position counting (`phylop_counts`)**: Determines the exact number of non-coding constraint positions (NCCPs) and non-constraint positions (NCNCPs) per region after excluding protein-coding regions.
    - **Quality Control & Covariates (`gene_qc`)**: Calculates region-level overlap with genomic QC data (e.g. low-mappability regions) and genomic covariates (e.g. ATAC-seq open chromatin peaks).
 
 4. **Downstream Statistical Testing (`nccm_enrichment`)**:
@@ -74,116 +95,213 @@ flowchart TD
 | **NCCM** | Non-Coding Constraint Mutation | Somatic variant in a non-coding region occurring at an evolutionary constrained position ($\text{phyloP} \ge \text{threshold}$). |
 | **NCNCM** | Non-Coding Non-Constraint Mutation | Somatic variant in a non-coding region occurring at a non-constrained position ($\text{phyloP} < \text{threshold}$). Used to model local background mutation rate. |
 | **NCCP** | Non-Coding Constraint Position | Number of non-coding, evolutionary constrained base pairs within a target region (used as the regression offset). |
-| **NCNCP** | Non-Coding Non-Constraint Position | Number of non-coding, non-constrained base pairs within a target region. |
+| **NCNCP** | Non-Coding Non-Constraint Position | Number of non-coding, non-constrained base pairs within a target region (used to calculate the background mutation rate). |
 | **Regions of Interest** | Gene Flanks / Sliding Windows | BED-formatted target intervals (e.g., promoters, gene-centric flanks, or sliding genomic windows) tested for NCCM burden. |
+
+---
+
+## Repository Structure
+
+```text
+├── config/
+│   ├── config.yaml          # Main pipeline configuration file
+│   └── example.input.tsv    # Example sample sheet format
+├── resources/               # Reference annotations (chromosomes list, gene sets, BEDs)
+├── workflow/
+│   ├── rules/               # Modular Snakemake rule definitions (.smk)
+│   ├── scripts/             # Python & Bash processing scripts
+│   └── Snakefile            # Snakemake workflow entry point
+├── src/nccm_enrichment/     # Python package for Negative Binomial regression & EBM
+├── notebooks/               # Jupyter notebooks for downstream statistical analysis
+├── submit.*.sh              # SLURM submission helper scripts
+├── results/                 # Default output directory (generated at runtime)
+└── pyproject.toml           # Python package configuration & dependencies
+```
+
+---
+
+## Installation & Software
+
+The pipeline requires Snakemake, standard bioinformatics CLI utilities (BEDTools, BEDOPS, snpEff), and the internal Python statistical library `nccm_enrichment`.
+
+### Option A: Conda / Mamba (Recommended for Local / Generic HPC)
+
+Create and activate a conda environment containing the required dependencies:
+
+```
+conda create -n nccm -c bioconda -c conda-forge \
+    snakemake=7.8.5 bedtools=2.29.2 bedops=2.4.39 snpeff=4.3t python=3.9
+
+conda activate nccm
+
+# Install the nccm_enrichment statistical package in editable mode
+pip install -e .
+```
+
+### Option B: UPPMAX (HPC Module Loading)
+
+On UPPMAX clusters, load the pre-installed modules and install the Python package:
+
+```
+module load bioinfo-tools snakemake/7.8.5 BEDOPS/2.4.39 snpEff/4.3t python3/3.9.5 BEDTools/2.29.2
+
+# Install the nccm_enrichment package
+pip install -e .
+```
+
+---
 
 ## Input 
 
-The input data to the pipeline are either vcf files or a data matrix from a previous run. Specify which to use as a starting point with the `start_from` option in the config file (see below in section `Config`). 
+The input data to the pipeline are either VCF files or a pre-existing composite matrix from a previous run. Specify which starting mode to use via the `start_from` option in `config/config.yaml`:
 
-To start from vcf files, provide filtered somatic variants in gzip compressed vcf file. For each sample, either provide one vcf that includes both somatic point mutations (SPIMs) and somatic indel mutations (SIMs), or two vcfs that are somatic point (SPM) and indel mutation (SIM) separated (one SPM file and one SIM file as e.g. from Mutect2 output). List the input files in an tsv file with with header that is either `sample spim` or `sample spm sim` - see `config/example.input.tsv`. Provide absolute file paths.
+1. **Starting from VCF files (`start_from: "vcf"`)**:
+   Provide filtered somatic variants in gzip-compressed VCF format. For each sample, you can supply either:
+   - **Combined**: One VCF containing both somatic point mutations (SPMs) and indels (SIMs).
+   - **Separated**: Two VCFs per sample, one for point mutations (SPM) and one for indels (SIM) (e.g., separate Mutect2 outputs).
 
-To start from a pre-existing matrix, you can provide an absolute path to that matrix in the config file. The matrix must match the format created by this pipeline.
+   List your input files in a tab-separated file (TSV) containing absolute paths. The header must be either `sample spim` (combined) or `sample spm sim` (separated). See `config/example.input.tsv`.
 
-## Required resources
+2. **Starting from a pre-existing matrix (`start_from: "matrix"`)**:
+   Provide the absolute path to a composite matrix via `matrix_path` in `config/config.yaml`. The matrix must match the schema generated by this pipeline (`*.composite_matrix.tsv.gz`).
 
-When starting from vcf input:
+---
 
-- PhyloP scores separated by chromosome in gzipped bed files. Columns (no header): `chromosome start end id phyloP`. The files have to be named as follows: chr1.bed.gz, chr2.bed.gz, chr3.bed.gz
+## Required Resources
 
-Always:
+When starting from VCF input:
+- **PhyloP scores**: Gzipped BED files separated by chromosome with columns (no header): `chromosome start end id phyloP`. Files must be named according to chromosome: `chr1.bed.gz`, `chr2.bed.gz`, etc. (or `1.bed.gz`, etc. depending on your chromosome naming scheme).
 
-- A list of chromosomes for your genome, e.g. `resources/canfam4.chromosomes.txt`
+Always required:
+- **Chromosome list**: Text file listing chromosomes in the target genome, one per line (e.g. `resources/canfam4.chromosomes.txt` or `resources/hg19.chromosomes.txt`).
+- **Protein-coding regions**: A 3-column BED file (no header: `chromosome start end`) containing all protein-coding exons in the genome, used to mask coding regions and compute non-coding baseline statistics.
+- **Regions of interest (Gene set)**: A 4-column BED file (no header: `chromosome lower_flank upper_flank gene`) defining candidate intervals to scan (e.g., `resources/canfam4_gene_100kb_flanks_4_NCCM_v2.bed`).
+- **Genomic QC / Covariates**: BED file(s) containing regions of poor quality (e.g., UMAP mappability < 1) or genomic covariates (e.g., ATAC-seq peak intervals).
 
-To create supporting data for the NCCM analysis:
+> [!IMPORTANT]
+> **Chromosome naming consistency:** Ensure chromosome identifiers (e.g. `chr1` vs `1`) are consistent across all inputs and resources, including VCFs, phyloP filenames/contents, chromosome lists, and BED files.
 
-- To count the number of non-coding constraint positions per region, provide a bed file of all protein-coding regions in the genome with the following columns (noheader): `chromosome start end`
-
-For the NCCM analysis:
-
-- A set of genes to test for NCCM enrichment in bed format, with the following columns (no header): `chromosome lower_flank upper_flank gene`. See `resources/canfam4_gene_100kb_flanks_4_NCCM_v2.bed`
-
-Make sure the chromosome notation is consistent across all input and resource data (e.g. either `chr1` or `1`)! Including vcf files, the phyloP scores bed file content + the naming of the phylP score bed files, the chromosome list file and the gene flanks file.
+---
 
 ## Config
 
-In the config file `config/config.yaml`, change `vcfs: "config/example.input.tsv"` to the name of your input tsv file. Also, set `spim:` to either  `"separated"` or `"combined"`, depending on whether you provided one or two vcf files.
+Configure pipeline parameters in `config/config.yaml`:
 
-- `start_from`: `"vcf"` or `"matrix"`
+| Parameter | Type / Format | Description | Example |
+| :--- | :--- | :--- | :--- |
+| `run_name` | String | Analysis run prefix used for output filenames. | `"hg19_test"` |
+| `start_from` | `"vcf"` \| `"matrix"` | Entry point: start from raw VCFs or a pre-computed composite matrix. | `"vcf"` |
+| `vcfs` | File path | Path to the sample sheet TSV (required if `start_from: "vcf"`). | `"config/example.input.tsv"` |
+| `matrix_path` | File path | Path to an existing composite matrix (required if `start_from: "matrix"`). | `"results/composite_matrix/...tsv.gz"` |
+| `spim` | `"separated"` \| `"combined"` | Whether SPM and SIM variants are provided in two separate VCFs or one combined file. | `"separated"` |
+| `genome` | String | Genome database name for snpEff. | `"GRCh37.75"` or `"CanFam3.1.99"` |
+| `phyloP` | Directory path | Directory containing the chromosome-specific phyloP BED files. | `"/path/to/phylop_dir"` |
+| `phyloP_format` | `"bed"` \| `"bw"` | Format of the phyloP files (`bed` or bigwig `bw`). `bw` is deprecated. | `"bed"` |
+| `phyloP_threshold` | Float / String | Threshold score defining constraint (e.g. 1.2 in humans, 1.3 in dogs). | `"1.2"` |
+| `chrom_list` | File path | File containing the list of chromosomes to process. | `"resources/hg19.chromosomes.txt"` |
+| `gene_set` | File path | Target intervals / gene flank regions to test. | `"resources/gene_flanks.bed"` |
+| `coding_bed` | File path | BED file of coding exons to exclude from non-coding space. | `"resources/coding_regions.bed"` |
+| `qc_bed` | File path | BED file of poor-quality regions (or functional overlap tracks). | `"resources/k100.umap.lt1.bed.gz"` |
+| `threads` | Integer | Maximum threads available for multi-threaded rules. | `16` |
 
-    - depending on `start_from` either of the following two must be set:
-
-        - `vcfs`: path to the input tsv file described above
-
-        - `matrix`: path to a pre-existing matrix
-
-- `genome`: Genome input for [snpEff](https://pcingola.github.io/SnpEff/snpeff/introduction/) - e.g. GRCh37.75
-
-- `phyloP`: Path for the directory of phyloP score files
-
-- `phyloP_threshold`: The threshold for what is considered constraint - we have used 1.2 for human and 1.3 for dogs (8% of the genome)
-
-- `phyloP_format`: whether scores are formatted as `bed` or bigwig `bw` format. Usually `bed`.
-
-- `chrom_list`: Path for file with list of chromosomes, see above in *Required resources*
-
-- `gene_set`: Path of the gene_set file as described in *Required resources*
-
-- `coding_bed`: Path to bed file of coding regions in the genome as described in *Required resources*
-
-- `qc_bed`: Path to bed files with poor quality regions
-
-- `threads`: Number of threads available for the run. 
-
-## Software
-
-Tested with the followinng software versions. 
-
-- Snakemake (version 7.8.5)
-- BEDOPS (version 2.4.39)
-- snpEff (version 4.3t)
-- python3 (version 3.9.5)
-- BEDTools (version 2.29.2)
-
-On Uppmax do `module load bioinfo-tools snakemake/7.8.5 BEDOPS/2.4.39 snpEff/4.3t python3/3.9.5 BEDTools/2.29.2`
+---
 
 ## Run
 
-### Quick start
+### Quick Start
 
-Test/dry run:
+Test / dry-run the workflow:
+```
+snakemake -np all
+```
 
-`snakemake -np all`
+Run the whole Snakemake workflow (annotation, composite matrix, and regional NCCM scan) with e.g. 16 cores:
+```
+snakemake --cores 16 all
+```
 
-Run the whole workflow with e.g. 16 cores:
+Create the composite variant matrix only (without running regional mutation scans):
+```
+snakemake --cores 16 composite_matrix
+```
 
-`snakemake --cores 16 all`
+Run only regional mutation scanning with a pre-existing matrix:
+```
+snakemake --cores 16 nccms
+```
 
-Create the matrix, don't run the nccm analysis:
+### Data Preparation (Supporting Data)
 
-`snakemake --cores 16 composite_matrix`
+For every candidate flank or window file, calculate the number of non-coding constraint (NCCP) and non-constraint (NCNCP) positions:
+```
+snakemake --cores 16 phylop_counts --config gene_set=path/to/gene_flanks.bed
+```
 
-Run only nccm analysis with a pre-existing matrix:
+Calculate region overlap with quality control filters (e.g., low-mappability regions) or covariate features (e.g., ATAC-seq peaks):
+```
+snakemake --cores 16 gene_qc --config qc_bed=path/to/qc_regions.bed.gz gene_set=path/to/gene_flanks.bed
+```
 
-`snakemake --cores 16 nccms`
+All covariate data for every region of interest must be manually merged to create a matrix or dataframe. 
 
-### Data preparation
+### Downstream Statistical Enrichment
 
-For every flank file, we need to count the number of non-coding constraint and non-coding non-constraint positions. If you provide a bed file with coding regions (see `Config`), we can do so like this:
+Once regional scans (`results/nccms/*.scan.tsv`) and supporting baseline features (`phylop_counts`, `gene_qc`, covariates) are generated, statistical enrichment testing is conducted using the included `nccm_enrichment` Python package, see `notebooks/hg19_pancancer_example_run.ipynb`. 
 
-```snakemake --cores 16 phylop_counts --config gene_set=/proj/sens2017503/nobackup/13_NCCM_pipeline_hg38/1_preprocessing/1_create_new_gene_flanks/hg38_gene_100kb_flanks.tsv```
+```python
+import pandas as pd
+from nccm_enrichment.core import ModelParams, nccm_enrichment_analysis, multiple_testing_correction
 
-Some flanks or regions will be of poor quality, e.g. poor mappability. To understand the overlap of the regions with known quality metrics, intersect the flank files with a bed file with QC data of your own choosing, e.g. regions of poor mappability. For this we can calculate the overlap with any qc data in bed format:
+# Load merged scan counts and covariates
+df = pd.read_csv("results/merged_covariates_and_counts.tsv", sep="\t")
 
-```snakemake --cores 16 gene_qc --config qc_bed=/proj/sens2017503/nobackup/12_pancancer_RP/1_new_flanks_file/e_gene_filtering/2_mappability/k100.umap.lt1.sorted.merged.bed.gz```
+# Run binned Gamma-Poisson regression
+params = ModelParams(y_col="nccm_count", offset_col="nccp", background_mutation_count_col="ncncm_count")
+df_results, models = nccm_enrichment_analysis(df, params=params)
+
+# Apply FDR correction
+df_fdr = multiple_testing_correction(df_results, params=params)
+```
+
+> [!TIP]
+> **Recommended Multi-Flank Strategy:**
+> For gene-centric analyses, it is recommended to evaluate multiple flank sizes (e.g., 5, 10, 50, and 100 kbp) and combine p-values using Empirical Brown's Method to capture both proximal promoter and distal enhancer signals. See [README_recommended_workflow.md](README_recommended_workflow.md) and the notebooks in [`notebooks/`](notebooks/) for end-to-end examples.
+
+---
 
 ## Output
 
-Main output files:
+### Primary Outputs
 
-- `results/composite_matrix/*.composite_matrix.tsv.gz` - includes all annotation data (snpeff + phyloP) for all samples. Missing phylop cores are `NaN`. 
+1. **Regional Mutation Scan Table** (`results/nccms/{run_name}.phylop-{threshold}.scan.tsv`):
+   The primary output of the Snakemake workflow, summarizing mutation burdens per target region:
 
-- `results/nccms/*scan.tsv` - this is the main output.
+   | Column | Description |
+   | :--- | :--- |
+   | `gene` | Region identifier or gene name from `gene_set`. |
+   | `nc_count` | Total number of non-coding mutations located in the region. |
+   | `ncncm_count` | Number of non-coding non-constraint mutations ($\text{phyloP} < \text{threshold}$). |
+   | `nccm_count` | Number of non-coding constraint mutations ($\text{phyloP} \ge \text{threshold}$). |
+   | `unique_nc_samples` | Number of distinct samples carrying at least one non-coding mutation in the region. |
+   | `unique_ncncm_samples` | Number of distinct samples carrying at least one NCNCM in the region. |
+   | `unique_nccm_samples` | Number of distinct samples carrying at least one NCCM in the region. |
+
+2. **Composite Variant Matrix** (`results/composite_matrix/{run_name}.composite_matrix.tsv.gz`):
+   Unified table of all somatic variants across all samples with attached annotations:
+   - **Variant coordinates**: `chrom`, `pos`, `ref`, `alt`, `sample`, `vaf`.
+   - **Coding classification**: `coding_type` (`coding` vs `noncoding`).
+   - **Conservation**: `phylop` score (missing scores represented as `NaN`).
+   - **snpEff annotations**: Functional impact, gene name, gene ID, transcript biotype, HGVS syntax, etc.
+
+3. **Annotation Summary** (`results/annotation/{run_name}.annotation_summary.tsv`):
+   Per-sample counts of variants across point mutations and indels, categorized by snpEff impact and coding type.
+
+### Supporting Data Outputs
+
+- `resources/{gene_set}.phylop{threshold}.phylop_counts.bed`: Counts of background constraint positions (`nccp`), non-constraint positions (`ncncp`), and total non-coding positions per target region.
+- `resources/{gene_set}.{qc_bed}.perc_overlap.bed`: Percentage base-pair overlap between each target region and the provided QC/covariate BED file.
+
+---
 
 ## Acknowledgements
 
